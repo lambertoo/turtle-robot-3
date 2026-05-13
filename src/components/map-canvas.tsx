@@ -10,10 +10,17 @@ interface PatrolWaypoint {
   theta: number;
 }
 
+interface RobotMarker {
+  pose: Pose | null;
+  color: string;
+  name: string;
+}
+
 interface MapCanvasProps {
   occupancyGrid: OccupancyGrid | null;
-  robotPose: Pose | null;
+  robotPose?: Pose | null;
   patrolWaypoints?: PatrolWaypoint[];
+  robots?: RobotMarker[];
 }
 
 const CANVAS_WIDTH = 800;
@@ -84,9 +91,15 @@ function worldToCanvas(
   };
 }
 
-export function MapCanvas({ occupancyGrid, robotPose, patrolWaypoints }: MapCanvasProps) {
+export function MapCanvas({ occupancyGrid, robotPose, patrolWaypoints, robots }: MapCanvasProps) {
   const t = useTranslations("map");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const allRobotMarkers: RobotMarker[] = robots && robots.length > 0
+    ? robots
+    : robotPose
+      ? [{ pose: robotPose, color: "#22c55e", name: "" }]
+      : [];
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -136,10 +149,12 @@ export function MapCanvas({ occupancyGrid, robotPose, patrolWaypoints }: MapCanv
       });
     }
 
-    if (robotPose) {
+    allRobotMarkers.forEach((marker) => {
+      if (!marker.pose) return;
+
       const { canvasX, canvasY } = worldToCanvas(
-        robotPose.position.x,
-        robotPose.position.y,
+        marker.pose.position.x,
+        marker.pose.position.y,
         occupancyGrid,
         offsetX,
         offsetY,
@@ -148,13 +163,21 @@ export function MapCanvas({ occupancyGrid, robotPose, patrolWaypoints }: MapCanv
 
       context.beginPath();
       context.arc(canvasX, canvasY, 8, 0, Math.PI * 2);
-      context.fillStyle = "#22c55e";
+      context.fillStyle = marker.color;
       context.fill();
       context.strokeStyle = "#ffffff";
       context.lineWidth = 2;
       context.stroke();
-    }
-  }, [occupancyGrid, robotPose, patrolWaypoints]);
+
+      if (marker.name) {
+        context.fillStyle = "#ffffff";
+        context.font = "bold 10px sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "bottom";
+        context.fillText(marker.name, canvasX, canvasY - 10);
+      }
+    });
+  }, [occupancyGrid, robotPose, patrolWaypoints, robots, allRobotMarkers]);
 
   if (!occupancyGrid) {
     return (

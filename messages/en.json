@@ -44,5 +44,28 @@
     "connecting": "Connecting to robot...",
     "connectionFailed": "Connection failed. Check that the robot is powered on.",
     "stopped": "Robot stopped"
+  },
+  "settings": {
+    "title": "Robot Configuration",
+    "addRobot": "Add Robot",
+    "editRobot": "Edit",
+    "removeRobot": "Remove",
+    "removeConfirm": "Are you sure you want to remove this robot?",
+    "robotName": "Robot name",
+    "robotIp": "IP address",
+    "robotPort": "Port",
+    "save": "Save",
+    "cancel": "Cancel",
+    "noRobots": "No robots configured",
+    "addFirst": "Add your first robot",
+    "backToDashboard": "Back to dashboard",
+    "connectedCount": "{connected}/{total} connected"
+  },
+  "robotSelector": {
+    "title": "Robots",
+    "controlling": "Active control",
+    "selectRobot": "Select a robot",
+    "noRobots": "No robots",
+    "addInSettings": "Configure in Settings"
   }
 }

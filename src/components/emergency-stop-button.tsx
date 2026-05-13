@@ -3,37 +3,52 @@
 import { useTranslations } from "next-intl";
 import { Ros, Topic } from "roslib";
 
-interface EmergencyStopButtonProps {
+interface RosConnection {
   ros: Ros | null;
   isConnected: boolean;
+}
+
+interface EmergencyStopButtonProps {
+  ros?: Ros | null;
+  isConnected?: boolean;
+  connections?: RosConnection[];
   onStop: () => void;
 }
 
-export function EmergencyStopButton({ ros, isConnected, onStop }: EmergencyStopButtonProps) {
+function sendStopToRos(rosInstance: Ros) {
+  const velocityPublisher = new Topic({
+    ros: rosInstance,
+    name: "/cmd_vel",
+    messageType: "geometry_msgs/msg/Twist",
+  });
+
+  const zeroVelocity = { linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 0 } };
+  velocityPublisher.publish(zeroVelocity);
+  velocityPublisher.publish(zeroVelocity);
+  velocityPublisher.publish(zeroVelocity);
+
+  const cancelGoalPublisher = new Topic({
+    ros: rosInstance,
+    name: "/navigate_to_pose/_action/cancel_goal",
+    messageType: "action_msgs/msg/CancelGoal",
+  });
+  cancelGoalPublisher.publish({
+    goal_info: { goal_id: { uuid: [] }, stamp: { sec: 0, nanosec: 0 } },
+  });
+}
+
+export function EmergencyStopButton({ ros, isConnected, connections, onStop }: EmergencyStopButtonProps) {
   const t = useTranslations("operations.stop");
 
   function handleEmergencyStop() {
-    if (ros && isConnected) {
-      const velocityPublisher = new Topic({
-        ros,
-        name: "/cmd_vel",
-        messageType: "geometry_msgs/msg/Twist",
+    if (connections && connections.length > 0) {
+      connections.forEach(({ ros: rosInstance, isConnected: connected }) => {
+        if (rosInstance && connected) {
+          sendStopToRos(rosInstance);
+        }
       });
-
-      const zeroVelocity = { linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 0 } };
-
-      velocityPublisher.publish(zeroVelocity);
-      velocityPublisher.publish(zeroVelocity);
-      velocityPublisher.publish(zeroVelocity);
-
-      const cancelGoalPublisher = new Topic({
-        ros,
-        name: "/navigate_to_pose/_action/cancel_goal",
-        messageType: "action_msgs/msg/CancelGoal",
-      });
-      cancelGoalPublisher.publish({
-        goal_info: { goal_id: { uuid: [] }, stamp: { sec: 0, nanosec: 0 } },
-      });
+    } else if (ros && isConnected) {
+      sendStopToRos(ros);
     }
 
     onStop();

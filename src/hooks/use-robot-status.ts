@@ -6,10 +6,13 @@ export interface RobotStatus {
   setActiveMode: (mode: RobotMode) => void;
   activateMode: (mode: RobotMode) => void;
   deactivateCurrentMode: () => void;
+  controlledRobotId: string | null;
+  setControlledRobotId: (id: string | null) => void;
 }
 
 export function useRobotStatus(): RobotStatus {
   const [activeMode, setActiveMode] = useState<RobotMode>("idle");
+  const [controlledRobotId, setControlledRobotId] = useState<string | null>(null);
 
   const activateMode = useCallback((mode: RobotMode) => {
     setActiveMode(mode);
@@ -24,5 +27,7 @@ export function useRobotStatus(): RobotStatus {
     setActiveMode,
     activateMode,
     deactivateCurrentMode,
+    controlledRobotId,
+    setControlledRobotId,
   };
 }

@@ -2,13 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { Ros, Topic } from "roslib";
 import type { OccupancyGrid, Pose } from "../lib/ros-types";
 
-interface UseMapSubscriptionOptions {
+export interface UseMapSubscriptionOptions {
   ros: Ros | null;
   isConnected: boolean;
   isActive: boolean;
 }
 
-interface MapSubscriptionData {
+export interface MapSubscriptionData {
   occupancyGrid: OccupancyGrid | null;
   robotPose: Pose | null;
 }

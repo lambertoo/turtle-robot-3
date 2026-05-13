@@ -44,5 +44,28 @@
     "connecting": "Connexion au robot...",
     "connectionFailed": "Connexion échouée. Vérifiez que le robot est allumé.",
     "stopped": "Robot arrêté"
+  },
+  "settings": {
+    "title": "Configuration des Robots",
+    "addRobot": "Ajouter un Robot",
+    "editRobot": "Modifier",
+    "removeRobot": "Supprimer",
+    "removeConfirm": "Êtes-vous sûr de vouloir supprimer ce robot ?",
+    "robotName": "Nom du robot",
+    "robotIp": "Adresse IP",
+    "robotPort": "Port",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "noRobots": "Aucun robot configuré",
+    "addFirst": "Ajoutez votre premier robot",
+    "backToDashboard": "Retour au tableau de bord",
+    "connectedCount": "{connected}/{total} connecté(s)"
+  },
+  "robotSelector": {
+    "title": "Robots",
+    "controlling": "Contrôle actif",
+    "selectRobot": "Sélectionner un robot",
+    "noRobots": "Aucun robot",
+    "addInSettings": "Configurer dans Paramètres"
   }
 }

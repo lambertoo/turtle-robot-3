@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { loadRobotConfigs, getDefaultRobotConfigs, type RobotConfig } from "@/lib/robot-storage";
 import { useRosbridge } from "@/hooks/use-rosbridge";
 import { useTeleop } from "@/hooks/use-teleop";
 import { VirtualJoystick } from "@/components/virtual-joystick";
@@ -10,8 +12,21 @@ import { LanguageToggle } from "@/components/language-toggle";
 export default function GuestPage() {
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("status");
+  const tRobotSelector = useTranslations("robotSelector");
 
-  const { ros, isConnected } = useRosbridge();
+  const [robotConfigs, setRobotConfigs] = useState<RobotConfig[]>([]);
+  const [selectedConfigIndex, setSelectedConfigIndex] = useState(0);
+
+  useEffect(() => {
+    const stored = loadRobotConfigs();
+    const configs = stored.length > 0 ? stored : getDefaultRobotConfigs();
+    setRobotConfigs(configs);
+  }, []);
+
+  const selectedConfig = robotConfigs[selectedConfigIndex] ?? null;
+  const rosbridgeUrl = selectedConfig ? `ws://${selectedConfig.ip}:${selectedConfig.port}` : null;
+
+  const { ros, isConnected } = useRosbridge(rosbridgeUrl);
   const { setVelocity, stopMovement } = useTeleop({
     ros,
     isConnected,
@@ -43,6 +58,31 @@ export default function GuestPage() {
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center gap-8">
+        {robotConfigs.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--color-text-secondary)]">
+              {tRobotSelector("selectRobot")}:
+            </span>
+            {robotConfigs.map((config, index) => (
+              <button
+                key={config.id}
+                onClick={() => setSelectedConfigIndex(index)}
+                className={`flex items-center gap-2 rounded-lg px-3 py-1 text-sm transition ${
+                  selectedConfigIndex === index
+                    ? "bg-[var(--color-surface-hover)] font-semibold"
+                    : "bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              >
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: config.color }}
+                />
+                {config.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         {isConnected ? (
           <>
             <VirtualJoystick onMove={setVelocity} onRelease={stopMovement} />

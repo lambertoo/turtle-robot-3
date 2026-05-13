@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import robotConfig from "../../../config/robot.json";
-import { useRosbridge } from "@/hooks/use-rosbridge";
+import { loadRobotConfigs, getDefaultRobotConfigs, type RobotConfig } from "@/lib/robot-storage";
+import { useMultiRosbridge } from "@/hooks/use-multi-rosbridge";
 import { useRobotStatus } from "@/hooks/use-robot-status";
 import { useTeleop } from "@/hooks/use-teleop";
 import { useMapSubscription } from "@/hooks/use-map-subscription";
@@ -11,20 +13,44 @@ import { OperationCard } from "@/components/operation-card";
 import { MapCanvas } from "@/components/map-canvas";
 import { VirtualJoystick } from "@/components/virtual-joystick";
 import { EmergencyStopButton } from "@/components/emergency-stop-button";
+import { RobotSelector } from "@/components/robot-selector";
 
 export default function OperatorPage() {
   const t = useTranslations("operations");
 
-  const { ros, isConnected } = useRosbridge();
-  const { activeMode, activateMode, deactivateCurrentMode } = useRobotStatus();
+  const [robotConfigs, setRobotConfigs] = useState<RobotConfig[]>([]);
+
+  useEffect(() => {
+    const stored = loadRobotConfigs();
+    setRobotConfigs(stored.length > 0 ? stored : getDefaultRobotConfigs());
+  }, []);
+
+  const { connections } = useMultiRosbridge(robotConfigs);
+  const { activeMode, activateMode, deactivateCurrentMode, controlledRobotId, setControlledRobotId } =
+    useRobotStatus();
+
+  useEffect(() => {
+    if (connections.length > 0 && !controlledRobotId) {
+      const firstConnected = connections.find((c) => c.isConnected);
+      if (firstConnected) {
+        setControlledRobotId(firstConnected.config.id);
+      }
+    }
+  }, [connections, controlledRobotId, setControlledRobotId]);
+
+  const controlledConnection = connections.find((c) => c.config.id === controlledRobotId) ?? null;
+  const controlledRos = controlledConnection?.ros ?? null;
+  const controlledIsConnected = controlledConnection?.isConnected ?? false;
+
   const { setVelocity, stopMovement } = useTeleop({
-    ros,
-    isConnected,
+    ros: controlledRos,
+    isConnected: controlledIsConnected,
     isActive: activeMode === "teleop",
   });
+
   const { occupancyGrid, robotPose } = useMapSubscription({
-    ros,
-    isConnected,
+    ros: controlledRos,
+    isConnected: controlledIsConnected,
     isActive: activeMode === "slam" || activeMode === "patrol",
   });
 
@@ -35,18 +61,40 @@ export default function OperatorPage() {
 
   const patrolWaypoints = activeMode === "patrol" ? robotConfig.patrol_waypoints : undefined;
 
+  const connectedRobotCount = connections.filter((c) => c.isConnected).length;
+  const controlledRobotName = controlledConnection?.config.name ?? null;
+
+  const mapRobots = connections
+    .filter((c) => c.isConnected)
+    .map((c) => ({
+      pose: c.config.id === controlledRobotId ? robotPose : null,
+      color: c.config.color,
+      name: c.config.name,
+    }));
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <RobotStatusBar isConnected={isConnected} activeMode={activeMode} />
+      <RobotStatusBar
+        activeMode={activeMode}
+        connectedRobotCount={connectedRobotCount}
+        totalRobotCount={connections.length}
+        controlledRobotName={controlledRobotName}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="flex w-72 flex-shrink-0 flex-col gap-3 overflow-y-auto border-r border-[var(--color-surface)] bg-[var(--color-background)] p-4">
+          <RobotSelector
+            connections={connections}
+            controlledRobotId={controlledRobotId}
+            onSelectRobot={setControlledRobotId}
+          />
+
           <OperationCard
             title={t("slam.title")}
             description={t("slam.description")}
             mode="slam"
             activeMode={activeMode}
-            isConnected={isConnected}
+            isConnected={controlledIsConnected}
             onActivate={activateMode}
           />
           <OperationCard
@@ -54,7 +102,7 @@ export default function OperatorPage() {
             description={t("patrol.description")}
             mode="patrol"
             activeMode={activeMode}
-            isConnected={isConnected}
+            isConnected={controlledIsConnected}
             onActivate={activateMode}
           />
           <OperationCard
@@ -62,13 +110,12 @@ export default function OperatorPage() {
             description={t("teleop.description")}
             mode="teleop"
             activeMode={activeMode}
-            isConnected={isConnected}
+            isConnected={controlledIsConnected}
             onActivate={activateMode}
           />
           <div className="mt-auto pt-4">
             <EmergencyStopButton
-              ros={ros}
-              isConnected={isConnected}
+              connections={connections.map((c) => ({ ros: c.ros, isConnected: c.isConnected }))}
               onStop={handleEmergencyStop}
             />
           </div>
@@ -89,7 +136,7 @@ export default function OperatorPage() {
             <div className="h-full w-full">
               <MapCanvas
                 occupancyGrid={occupancyGrid}
-                robotPose={robotPose}
+                robots={mapRobots}
                 patrolWaypoints={patrolWaypoints}
               />
             </div>

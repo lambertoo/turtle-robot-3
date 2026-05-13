@@ -1,9 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useRouter, usePathname } from "next/navigation";
 import type { RobotMode } from "@/lib/ros-types";
 import { LanguageToggle } from "./language-toggle";
+import { DemoModeToggle } from "./demo-mode-toggle";
+import { FullscreenToggle } from "./fullscreen-toggle";
 
 interface RobotStatusBarProps {
   isConnected?: boolean;
@@ -11,6 +12,11 @@ interface RobotStatusBarProps {
   connectedRobotCount?: number;
   totalRobotCount?: number;
   controlledRobotName?: string | null;
+  onOpenSettings?: () => void;
+  isDemoMode?: boolean;
+  onToggleDemoMode?: () => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export function RobotStatusBar({
@@ -19,15 +25,16 @@ export function RobotStatusBar({
   connectedRobotCount,
   totalRobotCount,
   controlledRobotName,
+  onOpenSettings,
+  isDemoMode = false,
+  onToggleDemoMode,
+  isFullscreen = false,
+  onToggleFullscreen,
 }: RobotStatusBarProps) {
   const t = useTranslations("common");
   const settingsT = useTranslations("settings");
   const operationsTranslations = useTranslations("operations");
   const hudT = useTranslations("hud");
-  const pathname = usePathname();
-  const router = useRouter();
-
-  const localePrefix = pathname.split("/").slice(0, 2).join("/");
 
   const modeLabels: Record<RobotMode, string> = {
     idle: t("idle"),
@@ -41,7 +48,7 @@ export function RobotStatusBar({
   const isAnyConnected = showMultiRobotStatus ? (connectedRobotCount! > 0) : singleConnected;
 
   return (
-    <header className="relative flex items-center justify-between hud-panel px-6 py-3 border-b border-blue-500/20">
+    <header className={`relative flex items-center justify-between hud-panel px-6 border-b border-blue-500/20 ${isFullscreen ? "py-2" : "py-3"}`}>
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[var(--color-madagascar-green)] via-[var(--color-accent-blue)] to-[var(--color-madagascar-green)]" />
 
       <div className="flex items-center gap-4">
@@ -99,12 +106,23 @@ export function RobotStatusBar({
         </div>
 
         <button
-          onClick={() => router.push(`${localePrefix}/settings`)}
-          className="text-lg text-[var(--color-text-secondary)] hover:text-[var(--color-accent-blue)] transition-colors"
-          title={settingsT("title")}
+          onClick={onOpenSettings}
+          className="flex items-center gap-2 rounded-lg bg-[var(--color-undp-primary)] px-4 py-2 text-sm font-bold uppercase tracking-wider text-white shadow-md transition-all hover:brightness-110 hover:shadow-lg hover:shadow-[rgba(4,104,177,0.3)] active:scale-95"
         >
-          ⚙
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          {settingsT("title")}
         </button>
+
+        {onToggleDemoMode && (
+          <DemoModeToggle isDemoMode={isDemoMode} onToggle={onToggleDemoMode} />
+        )}
+
+        {onToggleFullscreen && (
+          <FullscreenToggle isFullscreen={isFullscreen} onToggle={onToggleFullscreen} />
+        )}
 
         <LanguageToggle />
       </div>

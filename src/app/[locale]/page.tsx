@@ -8,6 +8,7 @@ import { useMultiRosbridge } from "@/hooks/use-multi-rosbridge";
 import { useRobotStatus } from "@/hooks/use-robot-status";
 import { useTeleop } from "@/hooks/use-teleop";
 import { useMapSubscription } from "@/hooks/use-map-subscription";
+import { useDemoMode } from "@/hooks/use-demo-mode";
 import { RobotStatusBar } from "@/components/robot-status-bar";
 import { OperationCard } from "@/components/operation-card";
 import { MapCanvas } from "@/components/map-canvas";
@@ -16,6 +17,7 @@ import { EmergencyStopButton } from "@/components/emergency-stop-button";
 import { RobotSelector } from "@/components/robot-selector";
 import { RobotConfigModal } from "@/components/robot-config-modal";
 import { CameraFeed } from "@/components/camera-feed";
+import { FloatingControls } from "@/components/floating-controls";
 
 export default function OperatorPage() {
   const t = useTranslations("operations");
@@ -23,6 +25,7 @@ export default function OperatorPage() {
 
   const [robotConfigs, setRobotConfigs] = useState<RobotConfig[]>([]);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const stored = loadRobotConfigs();
@@ -35,6 +38,41 @@ export default function OperatorPage() {
 
   const openConfigModal = useCallback(() => setIsConfigModalOpen(true), []);
   const closeConfigModal = useCallback(() => setIsConfigModalOpen(false), []);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((previous) => {
+      const next = !previous;
+      if (next) {
+        document.documentElement.requestFullscreen?.().catch(() => undefined);
+      } else {
+        document.exitFullscreen?.().catch(() => undefined);
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "F11" || event.key === "f" || event.key === "F") {
+        event.preventDefault();
+        toggleFullscreen();
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setIsFullscreen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [toggleFullscreen]);
 
   const { connections } = useMultiRosbridge(robotConfigs);
   const { activeMode, activateMode, deactivateCurrentMode, controlledRobotId, setControlledRobotId } =
@@ -59,11 +97,18 @@ export default function OperatorPage() {
     isActive: activeMode === "teleop",
   });
 
-  const { occupancyGrid, robotPose } = useMapSubscription({
+  const { occupancyGrid: realOccupancyGrid, robotPose: realRobotPose } = useMapSubscription({
     ros: controlledRos,
     isConnected: controlledIsConnected,
     isActive: activeMode === "slam" || activeMode === "patrol",
   });
+
+  const { isDemoMode, toggleDemoMode, demoOccupancyGrid, demoRobotPose, demoIsConnected } =
+    useDemoMode();
+
+  const effectiveIsConnected = isDemoMode ? demoIsConnected : controlledIsConnected;
+  const effectiveOccupancyGrid = isDemoMode ? demoOccupancyGrid : realOccupancyGrid;
+  const effectiveRobotPose = isDemoMode ? demoRobotPose : realRobotPose;
 
   function handleEmergencyStop() {
     stopMovement();
@@ -72,68 +117,79 @@ export default function OperatorPage() {
 
   const patrolWaypoints = activeMode === "patrol" ? robotConfig.patrol_waypoints : undefined;
 
-  const connectedRobotCount = connections.filter((c) => c.isConnected).length;
-  const controlledRobotName = controlledConnection?.config.name ?? null;
+  const connectedRobotCount = isDemoMode
+    ? 1
+    : connections.filter((c) => c.isConnected).length;
+  const totalRobotCount = isDemoMode ? 1 : connections.length;
+  const controlledRobotName = isDemoMode ? "DEMO BOT" : (controlledConnection?.config.name ?? null);
 
-  const mapRobots = connections
-    .filter((c) => c.isConnected)
-    .map((c) => ({
-      pose: c.config.id === controlledRobotId ? robotPose : null,
-      color: c.config.color,
-      name: c.config.name,
-    }));
+  const mapRobots = isDemoMode
+    ? [{ pose: effectiveRobotPose, color: "#f59e0b", name: "DEMO" }]
+    : connections
+        .filter((c) => c.isConnected)
+        .map((c) => ({
+          pose: c.config.id === controlledRobotId ? realRobotPose : null,
+          color: c.config.color,
+          name: c.config.name,
+        }));
 
   return (
     <div className="flex h-screen flex-col overflow-hidden grid-bg">
       <RobotStatusBar
         activeMode={activeMode}
         connectedRobotCount={connectedRobotCount}
-        totalRobotCount={connections.length}
+        totalRobotCount={totalRobotCount}
         controlledRobotName={controlledRobotName}
         onOpenSettings={openConfigModal}
+        isDemoMode={isDemoMode}
+        onToggleDemoMode={toggleDemoMode}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={toggleFullscreen}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="flex w-72 flex-shrink-0 flex-col gap-3 overflow-y-auto border-r border-[var(--color-surface)] bg-[var(--color-background)] p-4">
-          <RobotSelector
-            connections={connections}
-            controlledRobotId={controlledRobotId}
-            onSelectRobot={setControlledRobotId}
-            onOpenConfigModal={openConfigModal}
-          />
-
-          <OperationCard
-            title={t("slam.title")}
-            description={t("slam.description")}
-            mode="slam"
-            activeMode={activeMode}
-            isConnected={controlledIsConnected}
-            onActivate={activateMode}
-          />
-          <OperationCard
-            title={t("patrol.title")}
-            description={t("patrol.description")}
-            mode="patrol"
-            activeMode={activeMode}
-            isConnected={controlledIsConnected}
-            onActivate={activateMode}
-          />
-          <OperationCard
-            title={t("teleop.title")}
-            description={t("teleop.description")}
-            mode="teleop"
-            activeMode={activeMode}
-            isConnected={controlledIsConnected}
-            onActivate={activateMode}
-          />
-          <div className="mt-auto flex flex-col items-center gap-3 pt-4">
-            <img src="/undp-logo.svg" alt="UNDP" className="h-42 opacity-80" />
-            <EmergencyStopButton
-              connections={connections.map((c) => ({ ros: c.ros, isConnected: c.isConnected }))}
-              onStop={handleEmergencyStop}
+        {!isFullscreen && (
+          <aside className="flex w-72 flex-shrink-0 flex-col gap-3 overflow-y-auto border-r border-[var(--color-surface)] bg-[var(--color-background)] p-4">
+            <RobotSelector
+              connections={connections}
+              controlledRobotId={controlledRobotId}
+              onSelectRobot={setControlledRobotId}
+              onOpenConfigModal={openConfigModal}
             />
-          </div>
-        </aside>
+
+            <OperationCard
+              title={t("slam.title")}
+              description={t("slam.description")}
+              mode="slam"
+              activeMode={activeMode}
+              isConnected={effectiveIsConnected}
+              onActivate={activateMode}
+            />
+            <OperationCard
+              title={t("patrol.title")}
+              description={t("patrol.description")}
+              mode="patrol"
+              activeMode={activeMode}
+              isConnected={effectiveIsConnected}
+              onActivate={activateMode}
+            />
+            <OperationCard
+              title={t("teleop.title")}
+              description={t("teleop.description")}
+              mode="teleop"
+              activeMode={activeMode}
+              isConnected={effectiveIsConnected}
+              onActivate={activateMode}
+            />
+            <div className="mt-auto flex flex-col items-center gap-3 pt-4">
+              <img src="/undp-logo.svg" alt="UNDP" className="h-42 opacity-80" />
+              <EmergencyStopButton
+                connections={connections.map((c) => ({ ros: c.ros, isConnected: c.isConnected }))}
+                onStop={handleEmergencyStop}
+              />
+            </div>
+          </aside>
+        )}
 
         <main className="relative flex flex-1 items-center justify-center overflow-hidden p-6">
           {activeMode === "idle" && (
@@ -167,7 +223,7 @@ export default function OperatorPage() {
           {(activeMode === "slam" || activeMode === "patrol") && (
             <div className="h-full w-full">
               <MapCanvas
-                occupancyGrid={occupancyGrid}
+                occupancyGrid={effectiveOccupancyGrid}
                 robots={mapRobots}
                 patrolWaypoints={patrolWaypoints}
               />
@@ -176,8 +232,8 @@ export default function OperatorPage() {
 
           {activeMode === "teleop" && (
             <VirtualJoystick
-              onMove={setVelocity}
-              onRelease={stopMovement}
+              onMove={isDemoMode ? () => undefined : setVelocity}
+              onRelease={isDemoMode ? () => undefined : stopMovement}
             />
           )}
 
@@ -187,6 +243,15 @@ export default function OperatorPage() {
           />
         </main>
       </div>
+
+      {isFullscreen && (
+        <FloatingControls
+          activeMode={activeMode}
+          isConnected={effectiveIsConnected}
+          onActivateMode={activateMode}
+          onEmergencyStop={handleEmergencyStop}
+        />
+      )}
 
       <RobotConfigModal
         isOpen={isConfigModalOpen}

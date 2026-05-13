@@ -84,6 +84,16 @@
     "minimize": "Minimize",
     "videoPort": "Video port"
   },
+  "demo": {
+    "label": "DEMO",
+    "enable": "Enable demo mode",
+    "disable": "Disable demo mode",
+    "active": "Demo mode active"
+  },
+  "fullscreen": {
+    "enter": "Fullscreen",
+    "exit": "Exit fullscreen"
+  },
   "configModal": {
     "title": "Robot Configuration",
     "close": "Close",

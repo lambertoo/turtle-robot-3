@@ -84,6 +84,16 @@
     "minimize": "Réduire",
     "videoPort": "Port vidéo"
   },
+  "demo": {
+    "label": "DÉMO",
+    "enable": "Activer le mode démo",
+    "disable": "Désactiver le mode démo",
+    "active": "Mode démonstration actif"
+  },
+  "fullscreen": {
+    "enter": "Plein écran",
+    "exit": "Quitter le plein écran"
+  },
   "configModal": {
     "title": "Configuration des Robots",
     "close": "Fermer",

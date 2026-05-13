@@ -10,9 +10,9 @@ interface RobotSelectorProps {
   onOpenConfigModal: () => void;
 }
 
-function connectionStatusColor(isConnected: boolean, hasError: boolean): string {
-  if (isConnected) return "bg-[var(--color-accent-green)]";
-  if (hasError) return "bg-[var(--color-accent-red)]";
+function connectionStatusDotClass(isConnected: boolean, hasError: boolean): string {
+  if (isConnected) return "status-dot-connected";
+  if (hasError) return "status-dot-disconnected";
   return "bg-[var(--color-text-secondary)]";
 }
 
@@ -23,17 +23,18 @@ export function RobotSelector({
   onOpenConfigModal,
 }: RobotSelectorProps) {
   const t = useTranslations("robotSelector");
+  const hudT = useTranslations("hud");
 
   if (connections.length === 0) {
     return (
-      <div className="rounded-xl bg-[var(--color-surface)] p-3">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-          {t("title")}
+      <div className="rounded-xl hud-panel p-3">
+        <p className="mb-1 font-mono-data text-xs font-semibold uppercase tracking-widest text-[var(--color-accent-blue)] opacity-70">
+          {hudT("fleet")}
         </p>
         <p className="mb-2 text-sm text-[var(--color-text-secondary)]">{t("noRobots")}</p>
         <button
           onClick={onOpenConfigModal}
-          className="text-sm text-[var(--color-accent-blue)] underline"
+          className="text-sm text-[var(--color-accent-blue)] underline hover:opacity-80 transition-opacity"
         >
           {t("addInSettings")}
         </button>
@@ -42,10 +43,10 @@ export function RobotSelector({
   }
 
   return (
-    <div className="rounded-xl bg-[var(--color-surface)] p-3">
+    <div className="rounded-xl hud-panel p-3">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-          {t("title")}
+        <p className="font-mono-data text-xs font-semibold uppercase tracking-widest text-[var(--color-accent-blue)] opacity-70">
+          {hudT("fleet")}
         </p>
         <div className="flex items-center gap-1">
           <button
@@ -73,20 +74,21 @@ export function RobotSelector({
               onClick={() => onSelectRobot(config.id)}
               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-all ${
                 isControlled
-                  ? "bg-[var(--color-surface-hover)] font-semibold"
-                  : "hover:bg-[var(--color-surface-hover)]"
+                  ? "bg-[var(--color-surface-hover)] font-semibold border-l-2"
+                  : "hover:bg-[var(--color-surface-hover)] border-l-2 border-transparent"
               }`}
+              style={isControlled ? { borderLeftColor: config.color } : undefined}
             >
               <span
-                className="h-3 w-3 flex-shrink-0 rounded-full"
+                className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
                 style={{ background: config.color }}
               />
-              <span className="flex-1 truncate">{config.name}</span>
+              <span className="flex-1 truncate font-mono-data">{config.name}</span>
               <span
-                className={`h-2 w-2 flex-shrink-0 rounded-full ${connectionStatusColor(isConnected, connectionError !== null)}`}
+                className={`h-2 w-2 flex-shrink-0 rounded-full ${connectionStatusDotClass(isConnected, connectionError !== null)}`}
               />
               {isControlled && (
-                <span className="text-xs text-[var(--color-text-secondary)]">
+                <span className="font-mono-data text-xs text-[var(--color-accent-blue)] opacity-70">
                   {t("controlling")}
                 </span>
               )}

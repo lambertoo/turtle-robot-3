@@ -13,6 +13,7 @@ export default function GuestPage() {
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("status");
   const tRobotSelector = useTranslations("robotSelector");
+  const hudT = useTranslations("hud");
 
   const [robotConfigs, setRobotConfigs] = useState<RobotConfig[]>([]);
   const [selectedConfigIndex, setSelectedConfigIndex] = useState(0);
@@ -34,23 +35,25 @@ export default function GuestPage() {
   });
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <header className="flex items-center justify-between border-b border-[var(--color-surface)] bg-[var(--color-surface)] px-6 py-3">
+    <div className="flex h-screen flex-col overflow-hidden grid-bg">
+      <header className="relative flex items-center justify-between hud-panel border-b border-blue-500/20 px-6 py-3">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[var(--color-madagascar-green)] via-[var(--color-accent-blue)] to-[var(--color-madagascar-green)]" />
         <div className="flex items-center gap-3">
           <img src="/turtlebot3-waffle-pi.svg" alt="TurtleBot3 Waffle Pi" className="h-12" />
           <img src="/unipod-logo.svg" alt="UNIPOD MADAGASCAR" className="h-8" />
-          <span className="text-lg font-bold">{tCommon("guest")}</span>
+          <span className="text-lg font-bold tracking-wide">{tCommon("guest")}</span>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
+            <span className="font-mono-data text-xs text-[var(--color-text-secondary)] tracking-widest uppercase">
+              {hudT("system")}
+            </span>
             <div
-              className={`h-3 w-3 rounded-full ${
-                isConnected
-                  ? "bg-[var(--color-accent-green)]"
-                  : "bg-[var(--color-accent-red)]"
+              className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                isConnected ? "status-dot-connected animate-pulse-glow" : "status-dot-disconnected"
               }`}
             />
-            <span className="text-sm text-[var(--color-text-secondary)]">
+            <span className="font-mono-data text-sm text-[var(--color-text-secondary)]">
               {isConnected ? tCommon("connected") : tCommon("disconnected")}
             </span>
           </div>

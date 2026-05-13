@@ -18,6 +18,7 @@ import { RobotConfigModal } from "@/components/robot-config-modal";
 
 export default function OperatorPage() {
   const t = useTranslations("operations");
+  const hudT = useTranslations("hud");
 
   const [robotConfigs, setRobotConfigs] = useState<RobotConfig[]>([]);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -82,7 +83,7 @@ export default function OperatorPage() {
     }));
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden grid-bg">
       <RobotStatusBar
         activeMode={activeMode}
         connectedRobotCount={connectedRobotCount}
@@ -134,16 +135,29 @@ export default function OperatorPage() {
         <main className="flex flex-1 items-center justify-center overflow-hidden p-6">
           {activeMode === "idle" && (
             <div className="flex flex-col items-center gap-4">
-              <img
-                src="/turtlebot3-waffle-pi.svg"
-                alt="TurtleBot3 Waffle Pi"
-                className="h-40 drop-shadow-lg"
-              />
+              <div className="relative">
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: "radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)",
+                    transform: "scale(1.8)",
+                  }}
+                />
+                <img
+                  src="/turtlebot3-waffle-pi.svg"
+                  alt="TurtleBot3 Waffle Pi"
+                  className="relative h-40 drop-shadow-lg"
+                  style={{ filter: "drop-shadow(0 0 16px rgba(59,130,246,0.3))" }}
+                />
+              </div>
               <img src="/unipod-logo.svg" alt="UNIPOD MADAGASCAR" className="h-16 opacity-80" />
-              <h1 className="text-4xl font-black tracking-tight text-[var(--color-text-primary)]">
+              <h1 className="text-4xl font-black tracking-widest uppercase text-[var(--color-text-primary)]">
                 UNIPOD MADAGASCAR
               </h1>
-              <p className="text-lg text-[var(--color-text-secondary)]">TurtleBot3 Waffle Pi</p>
+              <p className="font-mono-data text-base text-[var(--color-text-secondary)]">TurtleBot3 Waffle Pi</p>
+              <p className="font-mono-data text-sm tracking-widest uppercase text-[var(--color-accent-green)] animate-blink">
+                {hudT("systemReady")}
+              </p>
             </div>
           )}
 

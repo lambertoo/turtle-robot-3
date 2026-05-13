@@ -68,6 +68,13 @@
     "noRobots": "Aucun robot",
     "addInSettings": "Configurer dans Paramètres"
   },
+  "hud": {
+    "system": "SYS",
+    "mode": "MODE",
+    "fleet": "FLOTTE",
+    "systemReady": "SYSTÈME PRÊT",
+    "emergency": "URGENCE"
+  },
   "configModal": {
     "title": "Configuration des Robots",
     "close": "Fermer",

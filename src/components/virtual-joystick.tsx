@@ -20,6 +20,8 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const centerRef = useRef({ x: 0, y: 0 });
+  const [readoutLinearX, setReadoutLinearX] = useState(0);
+  const [readoutAngularZ, setReadoutAngularZ] = useState(0);
 
   const calculateAndEmitVelocity = useCallback(
     (deltaX: number, deltaY: number) => {
@@ -33,10 +35,12 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
       const linearX = -normalizedY * robotConfig.max_linear_speed;
       const angularZ = -normalizedX * robotConfig.max_angular_speed;
 
-      const clampedKnobX = (clampedDistance * (distance > 0 ? deltaX / distance : 0));
-      const clampedKnobY = (clampedDistance * (distance > 0 ? deltaY / distance : 0));
+      const clampedKnobX = clampedDistance * (distance > 0 ? deltaX / distance : 0);
+      const clampedKnobY = clampedDistance * (distance > 0 ? deltaY / distance : 0);
 
       setKnobPosition({ x: clampedKnobX, y: clampedKnobY });
+      setReadoutLinearX(linearX);
+      setReadoutAngularZ(angularZ);
       onMove(linearX, angularZ);
     },
     [onMove]
@@ -76,6 +80,8 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
     isDraggingRef.current = false;
     setIsDragging(false);
     setKnobPosition({ x: 0, y: 0 });
+    setReadoutLinearX(0);
+    setReadoutAngularZ(0);
     onRelease();
   }, [onRelease]);
 
@@ -86,21 +92,29 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
           event.preventDefault();
           onMove(robotConfig.max_linear_speed, 0);
           setKnobPosition({ x: 0, y: -MAX_DISPLACEMENT });
+          setReadoutLinearX(robotConfig.max_linear_speed);
+          setReadoutAngularZ(0);
           break;
         case "ArrowDown":
           event.preventDefault();
           onMove(-robotConfig.max_linear_speed, 0);
           setKnobPosition({ x: 0, y: MAX_DISPLACEMENT });
+          setReadoutLinearX(-robotConfig.max_linear_speed);
+          setReadoutAngularZ(0);
           break;
         case "ArrowLeft":
           event.preventDefault();
           onMove(0, robotConfig.max_angular_speed);
           setKnobPosition({ x: -MAX_DISPLACEMENT, y: 0 });
+          setReadoutLinearX(0);
+          setReadoutAngularZ(robotConfig.max_angular_speed);
           break;
         case "ArrowRight":
           event.preventDefault();
           onMove(0, -robotConfig.max_angular_speed);
           setKnobPosition({ x: MAX_DISPLACEMENT, y: 0 });
+          setReadoutLinearX(0);
+          setReadoutAngularZ(-robotConfig.max_angular_speed);
           break;
       }
     };
@@ -108,6 +122,8 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
     const handleKeyUp = (event: KeyboardEvent) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
         setKnobPosition({ x: 0, y: 0 });
+        setReadoutLinearX(0);
+        setReadoutAngularZ(0);
         onRelease();
       }
     };
@@ -121,39 +137,91 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
     };
   }, [onMove, onRelease]);
 
+  const joystickSize = JOYSTICK_RADIUS * 2;
+
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-center gap-4">
       <div className="relative flex items-center justify-center">
-        <span className="absolute -top-7 text-xl select-none text-[var(--color-text-secondary)]">▲</span>
-        <span className="absolute -bottom-7 text-xl select-none text-[var(--color-text-secondary)]">▼</span>
-        <span className="absolute -left-7 text-xl select-none text-[var(--color-text-secondary)]">◀</span>
-        <span className="absolute -right-7 text-xl select-none text-[var(--color-text-secondary)]">▶</span>
+        <span className="absolute -top-7 text-base select-none text-[var(--color-text-secondary)] opacity-40">▲</span>
+        <span className="absolute -bottom-7 text-base select-none text-[var(--color-text-secondary)] opacity-40">▼</span>
+        <span className="absolute -left-7 text-base select-none text-[var(--color-text-secondary)] opacity-40">◀</span>
+        <span className="absolute -right-7 text-base select-none text-[var(--color-text-secondary)] opacity-40">▶</span>
 
         <div
           ref={containerRef}
-          className="touch-none relative h-48 w-48 rounded-full cursor-pointer select-none"
+          className="touch-none relative cursor-pointer select-none"
           style={{
-            background: "var(--color-surface)",
-            border: "2px solid var(--color-surface-hover)",
-            boxShadow: "inset 0 2px 8px rgba(0,0,0,0.3)",
+            width: joystickSize,
+            height: joystickSize,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(30,41,59,0.9) 0%, rgba(15,23,42,0.95) 100%)",
+            border: "2px solid rgba(59, 130, 246, 0.25)",
+            boxShadow: "inset 0 2px 12px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.05)",
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         >
+          <svg
+            className="absolute inset-0 pointer-events-none"
+            width={joystickSize}
+            height={joystickSize}
+          >
+            {[0.25, 0.5, 0.75].map((fraction) => (
+              <circle
+                key={fraction}
+                cx={JOYSTICK_RADIUS}
+                cy={JOYSTICK_RADIUS}
+                r={JOYSTICK_RADIUS * fraction}
+                fill="none"
+                stroke="rgba(59, 130, 246, 0.08)"
+                strokeWidth="1"
+              />
+            ))}
+            <line
+              x1={JOYSTICK_RADIUS}
+              y1="4"
+              x2={JOYSTICK_RADIUS}
+              y2={joystickSize - 4}
+              stroke="rgba(59, 130, 246, 0.1)"
+              strokeWidth="1"
+            />
+            <line
+              x1="4"
+              y1={JOYSTICK_RADIUS}
+              x2={joystickSize - 4}
+              y2={JOYSTICK_RADIUS}
+              stroke="rgba(59, 130, 246, 0.1)"
+              strokeWidth="1"
+            />
+          </svg>
+
           <div
-            className="absolute h-16 w-16 rounded-full transition-transform"
+            className="absolute rounded-full"
             style={{
-              background: "var(--color-accent-blue)",
+              width: KNOB_RADIUS * 2,
+              height: KNOB_RADIUS * 2,
+              background: "radial-gradient(circle at 35% 35%, rgba(96,165,250,0.9), rgba(37,99,235,0.8))",
               top: "50%",
               left: "50%",
               transform: `translate(calc(-50% + ${knobPosition.x}px), calc(-50% + ${knobPosition.y}px))`,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+              boxShadow: isDragging
+                ? "0 0 20px rgba(59,130,246,0.7), 0 0 40px rgba(59,130,246,0.3), 0 2px 8px rgba(0,0,0,0.5)"
+                : "0 2px 8px rgba(0,0,0,0.5), 0 0 8px rgba(59,130,246,0.2)",
               transition: isDragging ? "none" : "transform 0.15s ease-out",
             }}
           />
         </div>
+      </div>
+
+      <div className="font-mono-data text-sm flex gap-6 text-[var(--color-text-secondary)]">
+        <span>
+          LIN: <span className="text-[var(--color-accent-blue)]">{readoutLinearX.toFixed(2)}</span>
+        </span>
+        <span>
+          ANG: <span className="text-[var(--color-accent-blue)]">{readoutAngularZ.toFixed(2)}</span>
+        </span>
       </div>
 
       <p className="text-sm text-[var(--color-text-secondary)]">{t("instruction")}</p>

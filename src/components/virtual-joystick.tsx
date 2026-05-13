@@ -18,6 +18,7 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [knobPosition, setKnobPosition] = useState({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const centerRef = useRef({ x: 0, y: 0 });
 
   const calculateAndEmitVelocity = useCallback(
@@ -46,6 +47,7 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
       if (!containerRef.current) return;
       event.currentTarget.setPointerCapture(event.pointerId);
       isDraggingRef.current = true;
+      setIsDragging(true);
 
       const rect = containerRef.current.getBoundingClientRect();
       centerRef.current = {
@@ -72,6 +74,7 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
 
   const handlePointerUp = useCallback(() => {
     isDraggingRef.current = false;
+    setIsDragging(false);
     setKnobPosition({ x: 0, y: 0 });
     onRelease();
   }, [onRelease]);
@@ -147,7 +150,7 @@ export function VirtualJoystick({ onMove, onRelease }: VirtualJoystickProps) {
               left: "50%",
               transform: `translate(calc(-50% + ${knobPosition.x}px), calc(-50% + ${knobPosition.y}px))`,
               boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-              transition: isDraggingRef.current ? "none" : "transform 0.15s ease-out",
+              transition: isDragging ? "none" : "transform 0.15s ease-out",
             }}
           />
         </div>

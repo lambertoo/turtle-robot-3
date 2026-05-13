@@ -10,6 +10,7 @@ export interface RosbridgeConnection {
 }
 
 export function useRosbridge(): RosbridgeConnection {
+  const [ros, setRos] = useState<Ros | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const rosRef = useRef<Ros | null>(null);
@@ -19,22 +20,23 @@ export function useRosbridge(): RosbridgeConnection {
       rosRef.current.close();
     }
 
-    const ros = new Ros({ url: robotConfig.rosbridge_url });
+    const newRos = new Ros({ url: robotConfig.rosbridge_url });
 
-    ros.on("connection", () => {
+    newRos.on("connection", () => {
+      setRos(newRos);
       setIsConnected(true);
       setConnectionError(null);
     });
 
-    ros.on("error", (error: unknown) => {
+    newRos.on("error", (error: unknown) => {
       setConnectionError(String(error));
     });
 
-    ros.on("close", () => {
+    newRos.on("close", () => {
       setIsConnected(false);
     });
 
-    rosRef.current = ros;
+    rosRef.current = newRos;
   }, []);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export function useRosbridge(): RosbridgeConnection {
   }, [connect]);
 
   return {
-    ros: rosRef.current,
+    ros,
     isConnected,
     connectionError,
     reconnect: connect,

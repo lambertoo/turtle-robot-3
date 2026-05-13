@@ -134,11 +134,16 @@ export default function OperatorPage() {
         <main className="flex flex-1 items-center justify-center overflow-hidden p-6">
           {activeMode === "idle" && (
             <div className="flex flex-col items-center gap-4">
-              <img src="/unipod-logo.svg" alt="UNIPOD MADAGASCAR" className="h-24 opacity-80" />
+              <img
+                src="/turtlebot3-waffle-pi.svg"
+                alt="TurtleBot3 Waffle Pi"
+                className="h-40 drop-shadow-lg"
+              />
+              <img src="/unipod-logo.svg" alt="UNIPOD MADAGASCAR" className="h-16 opacity-80" />
               <h1 className="text-4xl font-black tracking-tight text-[var(--color-text-primary)]">
                 UNIPOD MADAGASCAR
               </h1>
-              <p className="text-lg text-[var(--color-text-secondary)]">Madagascar</p>
+              <p className="text-lg text-[var(--color-text-secondary)]">TurtleBot3 Waffle Pi</p>
             </div>
           )}
 

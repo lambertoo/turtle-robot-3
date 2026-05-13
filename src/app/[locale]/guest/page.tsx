@@ -37,6 +37,7 @@ export default function GuestPage() {
     <div className="flex h-screen flex-col overflow-hidden">
       <header className="flex items-center justify-between border-b border-[var(--color-surface)] bg-[var(--color-surface)] px-6 py-3">
         <div className="flex items-center gap-3">
+          <img src="/turtlebot3-waffle-pi.svg" alt="TurtleBot3 Waffle Pi" className="h-12" />
           <img src="/unipod-logo.svg" alt="UNIPOD MADAGASCAR" className="h-8" />
           <span className="text-lg font-bold">{tCommon("guest")}</span>
         </div>

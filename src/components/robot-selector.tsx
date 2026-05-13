@@ -1,13 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useRouter, usePathname } from "next/navigation";
 import type { RobotConnection } from "@/hooks/use-multi-rosbridge";
 
 interface RobotSelectorProps {
   connections: RobotConnection[];
   controlledRobotId: string | null;
   onSelectRobot: (id: string) => void;
+  onOpenConfigModal: () => void;
 }
 
 function connectionStatusColor(isConnected: boolean, hasError: boolean): string {
@@ -16,13 +16,13 @@ function connectionStatusColor(isConnected: boolean, hasError: boolean): string 
   return "bg-[var(--color-text-secondary)]";
 }
 
-export function RobotSelector({ connections, controlledRobotId, onSelectRobot }: RobotSelectorProps) {
+export function RobotSelector({
+  connections,
+  controlledRobotId,
+  onSelectRobot,
+  onOpenConfigModal,
+}: RobotSelectorProps) {
   const t = useTranslations("robotSelector");
-  const pathname = usePathname();
-  const router = useRouter();
-
-  const localePrefix = pathname.split("/").slice(0, 2).join("/");
-  const settingsPath = `${localePrefix}/settings`;
 
   if (connections.length === 0) {
     return (
@@ -32,7 +32,7 @@ export function RobotSelector({ connections, controlledRobotId, onSelectRobot }:
         </p>
         <p className="mb-2 text-sm text-[var(--color-text-secondary)]">{t("noRobots")}</p>
         <button
-          onClick={() => router.push(settingsPath)}
+          onClick={onOpenConfigModal}
           className="text-sm text-[var(--color-accent-blue)] underline"
         >
           {t("addInSettings")}
@@ -47,13 +47,22 @@ export function RobotSelector({ connections, controlledRobotId, onSelectRobot }:
         <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
           {t("title")}
         </p>
-        <button
-          onClick={() => router.push(settingsPath)}
-          className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-          title="Settings"
-        >
-          ⚙
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenConfigModal}
+            className="rounded px-1 py-0.5 text-xs text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]"
+            title="Configure robots"
+          >
+            +
+          </button>
+          <button
+            onClick={onOpenConfigModal}
+            className="rounded px-1 py-0.5 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]"
+            title="Robot settings"
+          >
+            ⚙
+          </button>
+        </div>
       </div>
       <div className="flex flex-col gap-1">
         {connections.map(({ config, isConnected, connectionError }) => {

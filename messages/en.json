@@ -67,5 +67,22 @@
     "selectRobot": "Select a robot",
     "noRobots": "No robots",
     "addInSettings": "Configure in Settings"
+  },
+  "configModal": {
+    "title": "Robot Configuration",
+    "close": "Close",
+    "addRobot": "+ Add Robot",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this robot?",
+    "name": "Name",
+    "namePlaceholder": "TurtleBot Alpha",
+    "ip": "IP Address",
+    "ipPlaceholder": "192.168.1.100",
+    "port": "Port",
+    "save": "Save",
+    "cancel": "Cancel",
+    "noRobots": "No robots configured",
+    "noRobotsHint": "Add your first robot to get started"
   }
 }

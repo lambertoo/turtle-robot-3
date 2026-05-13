@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import robotConfig from "../../../config/robot.json";
 import { loadRobotConfigs, getDefaultRobotConfigs, type RobotConfig } from "@/lib/robot-storage";
@@ -14,16 +14,25 @@ import { MapCanvas } from "@/components/map-canvas";
 import { VirtualJoystick } from "@/components/virtual-joystick";
 import { EmergencyStopButton } from "@/components/emergency-stop-button";
 import { RobotSelector } from "@/components/robot-selector";
+import { RobotConfigModal } from "@/components/robot-config-modal";
 
 export default function OperatorPage() {
   const t = useTranslations("operations");
 
   const [robotConfigs, setRobotConfigs] = useState<RobotConfig[]>([]);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   useEffect(() => {
     const stored = loadRobotConfigs();
     setRobotConfigs(stored.length > 0 ? stored : getDefaultRobotConfigs());
   }, []);
+
+  const handleConfigsChange = useCallback((updated: RobotConfig[]) => {
+    setRobotConfigs(updated);
+  }, []);
+
+  const openConfigModal = useCallback(() => setIsConfigModalOpen(true), []);
+  const closeConfigModal = useCallback(() => setIsConfigModalOpen(false), []);
 
   const { connections } = useMultiRosbridge(robotConfigs);
   const { activeMode, activateMode, deactivateCurrentMode, controlledRobotId, setControlledRobotId } =
@@ -87,6 +96,7 @@ export default function OperatorPage() {
             connections={connections}
             controlledRobotId={controlledRobotId}
             onSelectRobot={setControlledRobotId}
+            onOpenConfigModal={openConfigModal}
           />
 
           <OperationCard
@@ -150,6 +160,13 @@ export default function OperatorPage() {
           )}
         </main>
       </div>
+
+      <RobotConfigModal
+        isOpen={isConfigModalOpen}
+        onClose={closeConfigModal}
+        robotConfigs={robotConfigs}
+        onConfigsChange={handleConfigsChange}
+      />
     </div>
   );
 }

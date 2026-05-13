@@ -1,0 +1,48 @@
+{
+  "common": {
+    "appName": "UNIPOD MADAGASCAR TurtleBot3",
+    "operator": "Panneau Opérateur",
+    "guest": "Mode Invité",
+    "connected": "Connecté",
+    "disconnected": "Déconnecté",
+    "battery": "Batterie",
+    "activeMode": "Mode actif",
+    "idle": "En attente",
+    "language": "Langue"
+  },
+  "operations": {
+    "slam": {
+      "title": "Cartographie SLAM",
+      "description": "Cartographier l'environnement en temps réel",
+      "active": "Cartographie en cours..."
+    },
+    "patrol": {
+      "title": "Patrouille Autonome",
+      "description": "Navigation autonome par points de passage",
+      "active": "Patrouille en cours...",
+      "waypoint": "Point de passage {current}/{total}"
+    },
+    "teleop": {
+      "title": "Contrôle Manuel",
+      "description": "Piloter le robot avec le joystick",
+      "active": "Contrôle manuel actif"
+    },
+    "stop": {
+      "title": "Arrêt d'Urgence",
+      "description": "Arrêter immédiatement le robot"
+    }
+  },
+  "map": {
+    "noMap": "Aucune carte disponible",
+    "waitingForData": "En attente des données de la carte..."
+  },
+  "joystick": {
+    "instruction": "Glissez pour déplacer le robot",
+    "keyboard": "Ou utilisez les touches fléchées"
+  },
+  "status": {
+    "connecting": "Connexion au robot...",
+    "connectionFailed": "Connexion échouée. Vérifiez que le robot est allumé.",
+    "stopped": "Robot arrêté"
+  }
+}

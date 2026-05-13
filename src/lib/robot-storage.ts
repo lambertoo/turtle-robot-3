@@ -5,6 +5,7 @@ export interface RobotConfig {
   name: string;
   ip: string;
   port: number;
+  videoPort: number;
   color: string;
 }
 
@@ -45,6 +46,7 @@ export function getDefaultRobotConfigs(): RobotConfig[] {
       name: "TurtleBot Alpha",
       ip,
       port,
+      videoPort: 8080,
       color: ROBOT_MARKER_COLORS[0],
     },
   ];

@@ -15,6 +15,7 @@ import { VirtualJoystick } from "@/components/virtual-joystick";
 import { EmergencyStopButton } from "@/components/emergency-stop-button";
 import { RobotSelector } from "@/components/robot-selector";
 import { RobotConfigModal } from "@/components/robot-config-modal";
+import { CameraFeed } from "@/components/camera-feed";
 
 export default function OperatorPage() {
   const t = useTranslations("operations");
@@ -89,6 +90,7 @@ export default function OperatorPage() {
         connectedRobotCount={connectedRobotCount}
         totalRobotCount={connections.length}
         controlledRobotName={controlledRobotName}
+        onOpenSettings={openConfigModal}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -124,7 +126,8 @@ export default function OperatorPage() {
             isConnected={controlledIsConnected}
             onActivate={activateMode}
           />
-          <div className="mt-auto pt-4">
+          <div className="mt-auto flex flex-col items-center gap-3 pt-4">
+            <img src="/undp-logo.svg" alt="UNDP" className="h-42 opacity-80" />
             <EmergencyStopButton
               connections={connections.map((c) => ({ ros: c.ros, isConnected: c.isConnected }))}
               onStop={handleEmergencyStop}
@@ -132,14 +135,14 @@ export default function OperatorPage() {
           </div>
         </aside>
 
-        <main className="flex flex-1 items-center justify-center overflow-hidden p-6">
+        <main className="relative flex flex-1 items-center justify-center overflow-hidden p-6">
           {activeMode === "idle" && (
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
                 <div
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: "radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)",
+                    background: "radial-gradient(circle, rgba(4,104,177,0.15) 0%, transparent 70%)",
                     transform: "scale(1.8)",
                   }}
                 />
@@ -147,7 +150,7 @@ export default function OperatorPage() {
                   src="/turtlebot3-waffle-pi.svg"
                   alt="TurtleBot3 Waffle Pi"
                   className="relative h-40 drop-shadow-lg"
-                  style={{ filter: "drop-shadow(0 0 16px rgba(59,130,246,0.3))" }}
+                  style={{ filter: "drop-shadow(0 0 16px rgba(4,104,177,0.4))" }}
                 />
               </div>
               <img src="/unipod-logo.svg" alt="UNIPOD MADAGASCAR" className="h-16 opacity-80" />
@@ -177,6 +180,11 @@ export default function OperatorPage() {
               onRelease={stopMovement}
             />
           )}
+
+          <CameraFeed
+            robotConfig={controlledConnection?.config ?? null}
+            isConnected={controlledIsConnected}
+          />
         </main>
       </div>
 

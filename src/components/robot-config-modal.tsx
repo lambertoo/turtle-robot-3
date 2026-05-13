@@ -12,9 +12,10 @@ interface RobotFormState {
   name: string;
   ip: string;
   port: string;
+  videoPort: string;
 }
 
-const EMPTY_FORM: RobotFormState = { name: "", ip: "", port: "9090" };
+const EMPTY_FORM: RobotFormState = { name: "", ip: "", port: "9090", videoPort: "8080" };
 
 export interface RobotConfigModalProps {
   isOpen: boolean;
@@ -80,6 +81,18 @@ function RobotInlineForm({ formState, onChange, onSave, onCancel, t, autoFocusRe
             type="number"
           />
         </div>
+        <div className="w-28">
+          <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">
+            {t("videoPort")}
+          </label>
+          <input
+            className={INPUT_CLASS}
+            value={formState.videoPort}
+            onChange={(e) => onChange({ ...formState, videoPort: e.target.value })}
+            placeholder="8080"
+            type="number"
+          />
+        </div>
       </div>
       <div className="flex justify-end gap-2">
         <button
@@ -135,6 +148,7 @@ export function RobotConfigModal({
       name: formState.name.trim(),
       ip: formState.ip.trim(),
       port: parseInt(formState.port, 10) || 9090,
+      videoPort: parseInt(formState.videoPort, 10) || 8080,
       color: pickNextColor(robotConfigs),
     };
     persistConfigs([...robotConfigs, newConfig]);
@@ -145,7 +159,7 @@ export function RobotConfigModal({
   function handleEditRobot(config: RobotConfig) {
     setEditingRobotId(config.id);
     setShowAddForm(false);
-    setFormState({ name: config.name, ip: config.ip, port: String(config.port) });
+    setFormState({ name: config.name, ip: config.ip, port: String(config.port), videoPort: String(config.videoPort ?? 8080) });
     setConfirmDeleteId(null);
   }
 
@@ -159,6 +173,7 @@ export function RobotConfigModal({
               name: formState.name.trim(),
               ip: formState.ip.trim(),
               port: parseInt(formState.port, 10) || 9090,
+              videoPort: parseInt(formState.videoPort, 10) || 8080,
             }
           : config
       )

@@ -75,6 +75,15 @@
     "systemReady": "SYSTÈME PRÊT",
     "emergency": "URGENCE"
   },
+  "camera": {
+    "title": "Caméra",
+    "offline": "Caméra hors ligne",
+    "noFeed": "Aucun flux vidéo",
+    "retry": "Réessayer",
+    "expand": "Agrandir",
+    "minimize": "Réduire",
+    "videoPort": "Port vidéo"
+  },
   "configModal": {
     "title": "Configuration des Robots",
     "close": "Fermer",
@@ -87,6 +96,7 @@
     "ip": "Adresse IP",
     "ipPlaceholder": "192.168.1.100",
     "port": "Port",
+    "videoPort": "Port vidéo",
     "save": "Enregistrer",
     "cancel": "Annuler",
     "noRobots": "Aucun robot configuré",

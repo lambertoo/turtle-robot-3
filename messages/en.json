@@ -75,6 +75,15 @@
     "systemReady": "SYSTEM READY",
     "emergency": "EMERGENCY"
   },
+  "camera": {
+    "title": "Camera",
+    "offline": "Camera offline",
+    "noFeed": "No camera feed",
+    "retry": "Retry",
+    "expand": "Expand",
+    "minimize": "Minimize",
+    "videoPort": "Video port"
+  },
   "configModal": {
     "title": "Robot Configuration",
     "close": "Close",
@@ -87,6 +96,7 @@
     "ip": "IP Address",
     "ipPlaceholder": "192.168.1.100",
     "port": "Port",
+    "videoPort": "Video port",
     "save": "Save",
     "cancel": "Cancel",
     "noRobots": "No robots configured",

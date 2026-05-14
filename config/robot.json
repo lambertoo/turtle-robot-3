@@ -1,10 +1,15 @@
 {
-  "rosbridge_url": "ws://192.168.1.100:9090",
+  "rosbridge_url": "ws://192.168.1.132:9090",
   "max_linear_speed": 0.2,
   "max_angular_speed": 1.0,
   "patrol_waypoints": [
     { "x": 1.0, "y": 0.0, "theta": 0.0 },
     { "x": 2.0, "y": 1.0, "theta": 1.57 },
     { "x": 0.0, "y": 0.0, "theta": 0.0 }
-  ]
+  ],
+  "cleaning": {
+    "stripe_width": 0.3,
+    "wall_margin": 0.15,
+    "waypoint_spacing": 0.5
+  }
 }

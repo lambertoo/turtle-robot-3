@@ -34,4 +34,4 @@ export interface PoseStamped {
   pose: Pose;
 }
 
-export type RobotMode = "idle" | "slam" | "patrol" | "teleop";
+export type RobotMode = "idle" | "slam" | "patrol" | "teleop" | "cleaning";

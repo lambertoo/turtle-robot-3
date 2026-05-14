@@ -20,17 +20,70 @@
       "title": "Patrouille Autonome",
       "description": "Navigation autonome par points de passage",
       "active": "Patrouille en cours...",
-      "waypoint": "Point de passage {current}/{total}"
+      "waypoint": "Point de passage {current}/{total}",
+      "clickMapToAdd": "Cliquez sur la carte pour ajouter des points",
+      "runOnce": "Une fois",
+      "loop": "Boucle",
+      "start": "Démarrer la patrouille",
+      "clear": "Effacer",
+      "noWaypoints": "Aucun point défini",
+      "waypointCount": "{count} point(s) de passage"
     },
     "teleop": {
       "title": "Contrôle Manuel",
       "description": "Piloter le robot avec le joystick",
       "active": "Contrôle manuel actif"
     },
+    "clean": {
+      "title": "Nettoyage Couverture",
+      "description": "Nettoyage autonome par couverture de zone",
+      "active": "Nettoyage en cours..."
+    },
+    "clickToStop": "Cliquer pour désactiver",
     "stop": {
       "title": "Arrêt d'Urgence",
       "description": "Arrêter immédiatement le robot"
     }
+  },
+  "slam": {
+    "title": "Cartographie SLAM",
+    "newMapAuto": "Nouvelle carte — Autonome",
+    "newMapAutoDescription": "Le robot explore et cartographie seul",
+    "newMapManual": "Nouvelle carte — Manuel",
+    "newMapManualDescription": "Pilotez le robot pendant qu'il construit la carte",
+    "savedMaps": "Cartes sauvegardées",
+    "savedMapsDescription": "Charger une carte précédemment sauvegardée",
+    "mappingActive": "Cartographie en cours",
+    "autoExploreHint": "Le robot explore de manière autonome (30cm de distance)",
+    "manualHint": "Utilisez le joystick pour déplacer le robot dans la zone",
+    "stopExplore": "Arrêter l'exploration",
+    "saveMap": "Sauvegarder la carte",
+    "mapNamePlaceholder": "ex. Salle Labo A",
+    "save": "Sauvegarder",
+    "load": "Charger",
+    "noSavedMaps": "Aucune carte sauvegardée",
+    "startMapping": "Démarrer la cartographie",
+    "readyAutoDescription": "Le robot va explorer et cartographier la zone de manière autonome, en maintenant 30cm de distance des obstacles.",
+    "readyManualDescription": "Appuyez sur démarrer pour commencer la cartographie, puis utilisez le joystick pour déplacer le robot."
+  },
+  "cleaning": {
+    "selectMap": "Sélectionner une carte",
+    "noMaps": "Aucune carte sauvegardée. Cartographiez d'abord la zone avec SLAM.",
+    "loadingMap": "Chargement de la carte...",
+    "computingPath": "Calcul du parcours de couverture...",
+    "waypointProgress": "{current} sur {total} points de passage",
+    "progressPercent": "{percent}% terminé",
+    "elapsed": "Écoulé : {time}",
+    "pause": "Pause",
+    "resume": "Reprendre",
+    "stop": "Arrêter le nettoyage",
+    "complete": "Nettoyage terminé",
+    "missed": "{count} point(s) de passage inaccessible(s)",
+    "done": "Terminé",
+    "estimatedTime": "Est. {minutes} min",
+    "waypointCount": "{count} points de passage générés",
+    "startCleaning": "Démarrer le nettoyage",
+    "cancel": "Annuler"
   },
   "map": {
     "noMap": "Aucune carte disponible",

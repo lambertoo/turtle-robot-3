@@ -20,17 +20,70 @@
       "title": "Autonomous Patrol",
       "description": "Autonomous waypoint navigation",
       "active": "Patrol in progress...",
-      "waypoint": "Waypoint {current}/{total}"
+      "waypoint": "Waypoint {current}/{total}",
+      "clickMapToAdd": "Click on the map to add waypoints",
+      "runOnce": "Run once",
+      "loop": "Loop",
+      "start": "Start Patrol",
+      "clear": "Clear",
+      "noWaypoints": "No waypoints set",
+      "waypointCount": "{count} waypoint(s)"
     },
     "teleop": {
       "title": "Manual Control",
       "description": "Drive the robot with the joystick",
       "active": "Manual control active"
     },
+    "clean": {
+      "title": "Coverage Clean",
+      "description": "Autonomous coverage path cleaning",
+      "active": "Cleaning in progress..."
+    },
+    "clickToStop": "Click to deactivate",
     "stop": {
       "title": "Emergency Stop",
       "description": "Stop the robot immediately"
     }
+  },
+  "slam": {
+    "title": "SLAM Mapping",
+    "newMapAuto": "New Map — Autonomous",
+    "newMapAutoDescription": "Robot explores and maps on its own",
+    "newMapManual": "New Map — Manual",
+    "newMapManualDescription": "Drive the robot while it builds the map",
+    "savedMaps": "Saved Maps",
+    "savedMapsDescription": "Load a previously saved map",
+    "mappingActive": "Mapping in progress",
+    "autoExploreHint": "Robot is exploring autonomously (30cm clearance)",
+    "manualHint": "Use the joystick to drive the robot around the area",
+    "stopExplore": "Stop Exploring",
+    "saveMap": "Save Map",
+    "mapNamePlaceholder": "e.g. Lab Room A",
+    "save": "Save",
+    "load": "Load",
+    "noSavedMaps": "No saved maps yet",
+    "startMapping": "Start Mapping",
+    "readyAutoDescription": "The robot will explore and map the area autonomously, keeping 30cm clearance from obstacles.",
+    "readyManualDescription": "Press start to begin mapping, then use the joystick to drive the robot around the area."
+  },
+  "cleaning": {
+    "selectMap": "Select a map",
+    "noMaps": "No saved maps. Map the area first using SLAM.",
+    "loadingMap": "Loading map...",
+    "computingPath": "Computing coverage path...",
+    "waypointProgress": "{current} of {total} waypoints",
+    "progressPercent": "{percent}% complete",
+    "elapsed": "Elapsed: {time}",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop Cleaning",
+    "complete": "Cleaning complete",
+    "missed": "{count} waypoint(s) could not be reached",
+    "done": "Done",
+    "estimatedTime": "Est. {minutes} min",
+    "waypointCount": "{count} waypoints generated",
+    "startCleaning": "Start Cleaning",
+    "cancel": "Cancel"
   },
   "map": {
     "noMap": "No map available",

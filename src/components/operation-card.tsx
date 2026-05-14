@@ -10,6 +10,7 @@ interface OperationCardProps {
   activeMode: RobotMode;
   isConnected: boolean;
   onActivate: (mode: RobotMode) => void;
+  clickToStopLabel: string;
 }
 
 function SlamIcon() {
@@ -45,22 +46,35 @@ function TeleopIcon() {
   );
 }
 
+function CleaningIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M3 21h4L12 3h0l5 18h4" />
+      <path d="M7.5 15h9" />
+      <path d="M4 21h16" strokeDasharray="2 2" />
+    </svg>
+  );
+}
+
 const MODE_ICONS: Record<string, () => React.ReactElement> = {
   slam: SlamIcon,
   patrol: PatrolIcon,
   teleop: TeleopIcon,
+  cleaning: CleaningIcon,
 };
 
 const MODE_COLORS: Record<string, string> = {
   slam: "var(--color-accent-blue)",
   patrol: "var(--color-accent-green)",
   teleop: "var(--color-accent-amber)",
+  cleaning: "var(--color-accent-green)",
 };
 
 const MODE_LABELS: Record<string, string> = {
   slam: "SLAM",
   patrol: "NAV",
   teleop: "CTRL",
+  cleaning: "CLEAN",
 };
 
 export function OperationCard({
@@ -70,6 +84,7 @@ export function OperationCard({
   activeMode,
   isConnected,
   onActivate,
+  clickToStopLabel,
 }: OperationCardProps) {
   const isActive = activeMode === mode;
   const isDisabled = !isConnected || (activeMode !== "idle" && !isActive);
@@ -81,7 +96,7 @@ export function OperationCard({
       disabled={isDisabled}
       className={`w-full rounded-xl p-4 text-left transition-all hud-panel ${
         isActive
-          ? "hud-panel-active"
+          ? "hud-panel-active cursor-pointer hover:opacity-80"
           : isDisabled
             ? "cursor-not-allowed opacity-40"
             : "hover:border-blue-500/30 hover:shadow-blue-500/10"
@@ -113,7 +128,7 @@ export function OperationCard({
             )}
           </div>
           <p className="text-sm text-[var(--color-text-secondary)] truncate">
-            {description}
+            {isActive ? clickToStopLabel : description}
           </p>
         </div>
       </div>

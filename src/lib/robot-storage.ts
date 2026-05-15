@@ -36,8 +36,8 @@ export function saveRobotConfigs(configs: RobotConfig[]): void {
 }
 
 export function getDefaultRobotConfigs(): RobotConfig[] {
-  const urlMatch = robotConfig.rosbridge_url.match(/ws:\/\/([\d.]+):(\d+)/);
-  const ip = urlMatch ? urlMatch[1] : "192.168.1.100";
+  const urlMatch = robotConfig.rosbridge_url.match(/ws:\/\/([^:]+):(\d+)/);
+  const ip = urlMatch ? urlMatch[1] : "turtlebot3.local";
   const port = urlMatch ? parseInt(urlMatch[2], 10) : 9090;
 
   return [

@@ -7,6 +7,8 @@ export GST_PLUGIN_PATH=/usr/local/lib/aarch64-linux-gnu/gstreamer-1.0:${GST_PLUG
 
 source /opt/ros/jazzy/setup.bash
 
+export FASTRTPS_DEFAULT_PROFILES_FILE=/usr/local/etc/fastdds_udp_only.xml
+
 cleanup() {
     trap '' SIGTERM SIGINT
     echo "[startup] Stopping all child processes..."

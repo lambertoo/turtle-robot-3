@@ -23,6 +23,7 @@ $SCP "$SCRIPT_DIR/scan_relay.py" "$PI_HOST:/tmp/"
 $SCP "$SCRIPT_DIR/opencr-watchdog.sh" "$PI_HOST:/tmp/"
 $SCP "$SCRIPT_DIR/nav2-exploration.launch.py" "$PI_HOST:/tmp/"
 $SCP "$SCRIPT_DIR/nav2_exploration_params.yaml" "$PI_HOST:/tmp/"
+$SCP "$SCRIPT_DIR/fastdds_udp_only.xml" "$PI_HOST:/tmp/"
 
 $SSH "sudo cp /tmp/turtlebot3-start.sh /usr/local/bin/ && \
       sudo cp /tmp/frontier_explorer.py /usr/local/bin/ && \
@@ -30,6 +31,7 @@ $SSH "sudo cp /tmp/turtlebot3-start.sh /usr/local/bin/ && \
       sudo cp /tmp/opencr-watchdog.sh /usr/local/bin/ && \
       sudo cp /tmp/nav2-exploration.launch.py /usr/local/bin/ && \
       sudo cp /tmp/nav2_exploration_params.yaml /usr/local/etc/ && \
+      sudo cp /tmp/fastdds_udp_only.xml /usr/local/etc/ && \
       sudo chmod +x /usr/local/bin/turtlebot3-start.sh \
                      /usr/local/bin/opencr-watchdog.sh \
                      /usr/local/bin/frontier_explorer.py \

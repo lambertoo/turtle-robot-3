@@ -132,6 +132,184 @@ sudo apt install -y sshpass
 
 ---
 
+## NVIDIA Jetson Orin Nano Setup
+
+The Jetson Orin Nano 8GB can replace the Raspberry Pi 4 for significantly more compute (40 TOPS AI, 6-core Arm Cortex-A78AE, 1024-core Ampere GPU). This section covers the differences from the Pi setup.
+
+> **Not compatible:** The original Jetson Nano (2019) runs Ubuntu 18.04 / JetPack 4.x, which cannot run ROS 2 Humble or Jazzy. Only the **Orin Nano** (2023+) is supported.
+
+### Hardware Requirements
+
+- [NVIDIA Jetson Orin Nano 8GB Developer Kit](https://developer.nvidia.com/embedded/learn/get-started-jetson-orin-nano-devkit) or the module on a carrier board
+- USB-C power supply (the Orin Nano needs a dedicated power supply — the TurtleBot3 battery alone is not enough)
+- Same OpenCR board + LDS-03 LiDAR via USB (identical to Pi setup)
+- USB camera or CSI camera (MIPI CSI-2 with IMX219 sensor recommended)
+
+### Platform Differences from Raspberry Pi
+
+| | Raspberry Pi 4 | Jetson Orin Nano 8GB |
+|---|---|---|
+| **OS** | Ubuntu 24.04 | JetPack 6.x (Ubuntu 22.04) |
+| **ROS 2** | Jazzy | Humble |
+| **Package prefix** | `ros-jazzy-*` | `ros-humble-*` |
+| **Camera pipeline** | `libcamerasrc` (libcamera) | `nvarguscamerasrc` (NVIDIA ISP) |
+| **JPEG encoding** | `jpegenc` (CPU) | `nvjpegenc` (GPU-accelerated) |
+| **Default user** | `ubuntu` | `nvidia` (JetPack default) |
+| **GPU acceleration** | None | CUDA 12, cuDNN, TensorRT |
+
+### Step 1: Flash JetPack 6.x
+
+Download and flash JetPack 6.1+ from NVIDIA:
+
+https://developer.nvidia.com/embedded/jetpack
+
+Use the [SDK Manager](https://developer.nvidia.com/sdk-manager) on an Ubuntu x86 host or flash the SD card image directly.
+
+After first boot, complete the OEM setup (user, locale, network).
+
+### Step 2: Install ROS 2 Humble
+
+JetPack 6.x is based on Ubuntu 22.04 (Jammy), so use ROS 2 Humble (not Jazzy).
+
+Full instructions: https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html
+
+```bash
+sudo apt update && sudo apt install -y software-properties-common curl
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+sudo apt update
+sudo apt install -y ros-humble-ros-base ros-dev-tools
+```
+
+### Step 3: Install TurtleBot3 + Nav2 + Rosbridge
+
+Same packages as Pi, but with `humble` instead of `jazzy`:
+
+```bash
+sudo apt install -y \
+  ros-humble-turtlebot3-bringup \
+  ros-humble-turtlebot3-cartographer \
+  ros-humble-nav2-bringup ros-humble-nav2-bt-navigator \
+  ros-humble-nav2-controller ros-humble-nav2-planner \
+  ros-humble-nav2-behaviors ros-humble-nav2-lifecycle-manager \
+  ros-humble-nav2-waypoint-follower \
+  ros-humble-rosbridge-server
+```
+
+### Step 4: Install Camera and System Dependencies
+
+```bash
+sudo apt install -y \
+  python3-opencv python3-numpy \
+  gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+  nvidia-l4t-gstreamer \
+  cmake libjpeg-dev
+```
+
+The `nvidia-l4t-gstreamer` package provides `nvarguscamerasrc` and `nvjpegenc` for GPU-accelerated camera capture and JPEG encoding.
+
+### Step 5: Build mjpg-streamer
+
+Same as Pi:
+
+```bash
+cd /tmp
+git clone https://github.com/jacksonliam/mjpg-streamer.git
+cd mjpg-streamer/mjpg-streamer-experimental
+make
+sudo make install
+```
+
+### Step 6: Shell Environment
+
+```bash
+echo 'source /opt/ros/humble/setup.bash' >> ~/.bashrc
+echo 'export TURTLEBOT3_MODEL=waffle_pi' >> ~/.bashrc
+echo 'export LDS_MODEL=LDS-03' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Step 7: Script Modifications
+
+Before deploying, you need to change three things in the `pi-deploy/` scripts:
+
+**1. ROS distro** — In all scripts that source ROS:
+
+```bash
+# Change this (Pi):
+source /opt/ros/jazzy/setup.bash
+
+# To this (Jetson):
+source /opt/ros/humble/setup.bash
+```
+
+Files to update: `turtlebot3-start.sh`, `opencr-watchdog.sh`
+
+**2. Camera pipeline** — In `turtlebot3-start.sh`, replace the GStreamer camera line:
+
+```bash
+# Pi (libcamera, CPU JPEG):
+gst-launch-1.0 libcamerasrc ! video/x-raw,width=640,height=480,framerate=15/1 ! videoconvert ! jpegenc quality=70 ! multifilesink location=/tmp/camera/snap.jpg max-files=1 &
+
+# Jetson (NVIDIA ISP, GPU JPEG):
+gst-launch-1.0 nvarguscamerasrc ! 'video/x-raw(memory:NVMM),width=640,height=480,framerate=15/1' ! nvjpegenc quality=70 ! multifilesink location=/tmp/camera/snap.jpg max-files=1 &
+```
+
+If using a USB camera instead of CSI, use `v4l2src` (works on both platforms):
+
+```bash
+gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=15/1 ! videoconvert ! jpegenc quality=70 ! multifilesink location=/tmp/camera/snap.jpg max-files=1 &
+```
+
+**3. Deploy script packages** — In `deploy-nav2.sh`, replace all `ros-jazzy-` with `ros-humble-`:
+
+```bash
+# Change PI_HOST default to match your Jetson:
+PI_HOST="${PI_HOST:-nvidia@192.168.1.132}"
+PI_PASS="${PI_PASS:-nvidia}"
+```
+
+### Step 8: Deploy
+
+```bash
+cd pi-deploy
+PI_HOST=nvidia@YOUR_JETSON_IP PI_PASS=YOUR_PASSWORD bash deploy-nav2.sh
+```
+
+The deploy script, systemd service, watchdog, and all other components work identically on the Jetson once the ROS distro and camera pipeline are updated.
+
+### ROS 2 Humble vs Jazzy: API Differences
+
+For this project, there is one notable API change:
+
+| Feature | Humble | Jazzy |
+|---|---|---|
+| `/cmd_vel` message type | `geometry_msgs/msg/Twist` | `geometry_msgs/msg/TwistStamped` |
+
+The dashboard auto-detects this — no dashboard code changes needed. The Pi-side scripts (`scan_relay.py`, `frontier_explorer.py`) use the message type that matches the installed TurtleBot3 packages, so they work on both distros without modification.
+
+### GPU Acceleration Opportunities
+
+The Jetson Orin Nano enables capabilities not possible on Pi:
+
+- **CUDA-accelerated costmaps** — Nav2 supports GPU-accelerated costmap filters
+- **Real-time object detection** — Run YOLO or SSD on the GPU for obstacle classification
+- **Faster SLAM** — Cartographer benefits from the stronger CPU
+- **Hardware video encoding** — `nvjpegenc` is ~10x faster than CPU `jpegenc`
+- **Isaac ROS** — NVIDIA's GPU-accelerated ROS 2 packages: https://nvidia-isaac-ros.github.io/
+
+### Power Considerations
+
+The Jetson Orin Nano draws 7-15W vs the Pi 4's 3-7W. Options:
+
+- Use a separate USB-C power supply (recommended for development)
+- Upgrade the TurtleBot3 battery to a larger capacity LiPo
+- Use NVIDIA's power modes: `sudo nvpmodel -m 1` for 15W, `sudo nvpmodel -m 2` for 7W
+
+Check current power mode: `sudo nvpmodel -q`
+
+---
+
 ## Setup
 
 ### 1. Clone and install

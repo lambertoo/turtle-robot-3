@@ -94,7 +94,7 @@ export default function OperatorPage() {
   });
 
   const {
-    slamState, selectNewMap, startMapping, selectSavedMaps, backToChoose,
+    slamState, explorerStatus, selectNewMap, startMapping, selectSavedMaps, backToChoose,
     saveCurrentMap, loadSavedMap, stopExploring,
   } = useSlam({
     ros: controlledRos,
@@ -253,6 +253,7 @@ export default function OperatorPage() {
           {activeMode === "slam" && (
             <SlamControls
               slamState={slamState}
+              explorerStatus={explorerStatus}
               onSelectNewMap={selectNewMap}
               onStartMapping={handleStartMapping}
               onSelectSavedMaps={selectSavedMaps}

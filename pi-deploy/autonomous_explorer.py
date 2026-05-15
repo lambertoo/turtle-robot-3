@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 from geometry_msgs.msg import TwistStamped
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import String
@@ -58,12 +58,13 @@ class AutonomousExplorer(Node):
         self.backup_angular_direction = 1.0
 
         lidar_qos = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.VOLATILE,
             history=HistoryPolicy.KEEP_LAST,
-            depth=1,
+            depth=10,
         )
         self.lidar_subscription = self.create_subscription(
-            LaserScan, "/scan", self.handle_lidar_scan, lidar_qos
+            LaserScan, "/scan_reliable", self.handle_lidar_scan, lidar_qos
         )
 
         self.velocity_publisher = self.create_publisher(TwistStamped, "/cmd_vel", 10)

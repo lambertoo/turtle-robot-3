@@ -51,6 +51,87 @@ Built with Next.js 16, React 19, Tailwind CSS 4, roslibjs, and next-intl (Englis
 - GStreamer with libcamera support
 - `mjpg-streamer` compiled with input_file plugin
 
+## Fresh Raspberry Pi Setup
+
+Complete dependency installation for a clean Ubuntu 24.04 on Raspberry Pi 4. Run these on the Pi directly or via SSH.
+
+### Install ROS 2 Jazzy
+
+Full instructions: https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html
+
+```bash
+sudo apt update && sudo apt install -y software-properties-common curl
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+sudo apt update
+sudo apt install -y ros-jazzy-ros-base ros-dev-tools
+```
+
+### Install TurtleBot3 + Nav2 + Rosbridge
+
+```bash
+sudo apt install -y \
+  ros-jazzy-turtlebot3-bringup \
+  ros-jazzy-turtlebot3-cartographer \
+  ros-jazzy-nav2-bringup ros-jazzy-nav2-bt-navigator \
+  ros-jazzy-nav2-controller ros-jazzy-nav2-planner \
+  ros-jazzy-nav2-behaviors ros-jazzy-nav2-lifecycle-manager \
+  ros-jazzy-nav2-waypoint-follower \
+  ros-jazzy-rosbridge-server
+```
+
+### Install Camera and System Dependencies
+
+```bash
+sudo apt install -y \
+  python3-opencv python3-numpy \
+  gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+  libcamera-apps cmake libjpeg-dev
+```
+
+### Build mjpg-streamer (from source)
+
+mjpg-streamer is not available as an apt package — build from source:
+
+```bash
+cd /tmp
+git clone https://github.com/jacksonliam/mjpg-streamer.git
+cd mjpg-streamer/mjpg-streamer-experimental
+make
+sudo make install
+```
+
+This installs `mjpg_streamer` to `/usr/local/bin/` and plugins to `/usr/local/lib/mjpg-streamer/`.
+
+### Shell Environment
+
+Add to `~/.bashrc`:
+
+```bash
+echo 'source /opt/ros/jazzy/setup.bash' >> ~/.bashrc
+echo 'export TURTLEBOT3_MODEL=waffle_pi' >> ~/.bashrc
+echo 'export LDS_MODEL=LDS-03' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Development Machine (macOS/Linux)
+
+For deploying to the Pi from your laptop:
+
+```bash
+# Node.js 20+ (https://nodejs.org/en/download)
+# macOS:
+brew install node
+
+# sshpass (needed by deploy script)
+# macOS:
+brew install hudochenkov/sshpass/sshpass
+# Ubuntu/Debian:
+sudo apt install -y sshpass
+```
+
+---
+
 ## Setup
 
 ### 1. Clone and install

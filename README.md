@@ -326,20 +326,24 @@ Edit `config/robot.json`:
 
 ```json
 {
-  "rosbridge_url": "ws://YOUR_ROBOT_IP:9090",
+  "rosbridge_url": "ws://turtlebot3.local:9090",
   "max_linear_speed": 0.2,
   "max_angular_speed": 1.0
 }
 ```
 
-### 3. Deploy to Raspberry Pi
+The robot advertises itself as `turtlebot3.local` via mDNS (Avahi), so you don't need to know the IP address. This works on macOS, Linux, and Windows (with Bonjour) on the same network. You can also use the IP directly: `ws://192.168.1.XXX:9090`.
 
-The `pi-deploy/` directory contains all files that run on the Pi. The one-shot deployment script installs Nav2 packages and copies everything:
+### 3. Deploy to the robot
+
+The `pi-deploy/` directory contains all files that run on the robot. The one-shot deployment script installs Nav2 packages and copies everything:
 
 ```bash
 cd pi-deploy
 bash deploy-nav2.sh
 ```
+
+By default it connects to `ubuntu@turtlebot3.local` (mDNS). Override with an IP if needed: `PI_HOST=ubuntu@192.168.1.140 bash deploy-nav2.sh`
 
 Or deploy files manually:
 
@@ -479,7 +483,7 @@ Dashboard control: `/autonomous_explorer/start` and `/autonomous_explorer/stop` 
 Check `sudo journalctl -u turtlebot3 -f` for serial errors. If turtlebot3_ros crashed, run `sudo systemctl restart turtlebot3`. The systemd service uses `KillMode=control-group` to ensure clean restarts.
 
 **Dashboard can't connect?**
-Verify the robot IP in `config/robot.json` and that rosbridge is running: `curl -s http://ROBOT_IP:9090` should return a WebSocket upgrade response.
+Verify `config/robot.json` uses `turtlebot3.local` (or the robot's IP) and that rosbridge is running: `curl -s http://turtlebot3.local:9090` should return a WebSocket upgrade response. If mDNS doesn't resolve, check you're on the same network and try `ping turtlebot3.local`.
 
 **Map not updating?**
 The scan relay (`scan_relay.py`) bridges the LiDAR QoS gap between BEST_EFFORT and RELIABLE. Check that it's running: `journalctl -u turtlebot3 | grep scan_relay`.

@@ -1,5 +1,5 @@
 {
-  "rosbridge_url": "ws://192.168.1.132:9090",
+  "rosbridge_url": "ws://turtlebot3.local:9090",
   "max_linear_speed": 0.2,
   "max_angular_speed": 1.0,
   "patrol_waypoints": [

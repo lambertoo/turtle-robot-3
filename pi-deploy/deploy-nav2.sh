@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-PI_HOST="${PI_HOST:-ubuntu@192.168.1.132}"
+PI_HOST="${PI_HOST:-ubuntu@turtlebot3.local}"
 PI_PASS="${PI_PASS:-turtlebot3}"
 SSH="sshpass -p $PI_PASS ssh -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no $PI_HOST"
 SCP="sshpass -p $PI_PASS scp -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no"
@@ -73,6 +73,6 @@ echo "The robot will start automatically on every boot."
 echo "Dashboard: open http://localhost:3000 after running 'npm run dev'"
 echo ""
 echo "Useful commands:"
-echo "  Logs:    ssh $PI_HOST 'journalctl -u turtlebot3 -f'"
-echo "  Restart: ssh $PI_HOST 'sudo systemctl restart turtlebot3'"
-echo "  Stop:    ssh $PI_HOST 'sudo systemctl stop turtlebot3'"
+echo "  Logs:    ssh ubuntu@turtlebot3.local 'journalctl -u turtlebot3 -f'"
+echo "  Restart: ssh ubuntu@turtlebot3.local 'sudo systemctl restart turtlebot3'"
+echo "  Stop:    ssh ubuntu@turtlebot3.local 'sudo systemctl stop turtlebot3'"

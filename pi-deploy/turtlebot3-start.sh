@@ -47,13 +47,13 @@ MAP_SAVER_PID=$!
 
 for i in 1 2 3 4 5; do
   sleep 3
-  ros2 lifecycle set /map_saver configure 2>/dev/null && break
+  timeout 5 ros2 lifecycle set /map_saver configure 2>/dev/null && break
 done
-ros2 lifecycle set /map_saver activate
+timeout 5 ros2 lifecycle set /map_saver activate 2>/dev/null
 
-ros2 launch /usr/local/bin/nav2-cleaning.launch.py use_sim_time:=false params_file:=/usr/local/etc/nav2_cleaning_params.yaml &
+ros2 launch /usr/local/bin/nav2-exploration.launch.py use_sim_time:=false params_file:=/usr/local/etc/nav2_exploration_params.yaml &
 NAV2_PID=$!
-sleep 5
+sleep 10
 
 gst-launch-1.0 libcamerasrc ! video/x-raw,width=640,height=480,framerate=15/1 ! videoconvert ! jpegenc quality=70 ! multifilesink location=/tmp/camera/snap.jpg max-files=1 &
 GST_PID=$!
@@ -62,7 +62,7 @@ sleep 3
 mjpg_streamer -i "input_file.so -f /tmp/camera -n snap.jpg -d 0.1" -o "output_http.so -p 8080 -w /usr/local/share/mjpg-streamer/www" &
 MJPG_PID=$!
 
-python3 /usr/local/bin/autonomous_explorer.py &
+python3 /usr/local/bin/frontier_explorer.py &
 EXPLORER_PID=$!
 
 wait $BRINGUP_PID $ROSBRIDGE_PID $RELAY_PID $SLAM_PID $MAP_SAVER_PID $NAV2_PID $GST_PID $MJPG_PID $WATCHDOG_PID $EXPLORER_PID

@@ -17,14 +17,15 @@ from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 
-SAFE_DISTANCE = 0.30
+ROBOT_BODY_OFFSET = 0.21
+SAFE_DISTANCE = ROBOT_BODY_OFFSET + 0.30
 LINEAR_SPEED = 0.15
 ANGULAR_SPEED = 0.8
 BACKUP_SPEED = 0.10
-STUCK_SPIN_THRESHOLD = 20
-BACKUP_ITERATIONS = 10
+STUCK_SPIN_THRESHOLD = 60
+BACKUP_ITERATIONS = 30
 CAMERA_SNAP_PATH = "/tmp/camera/snap.jpg"
-CAMERA_FLOOR_THRESHOLD = 0.40
+CAMERA_FLOOR_THRESHOLD = 0.30
 CAMERA_CHECK_INTERVAL = 0.333
 CONTROL_LOOP_INTERVAL = 0.100
 STATUS_PUBLISH_INTERVAL = 0.500
@@ -273,7 +274,13 @@ class AutonomousExplorer(Node):
             ANGULAR_SPEED if random.random() > 0.5 else -ANGULAR_SPEED
         )
         self.spin_iterations_without_forward_progress = 0
-        self.get_logger().info("Stuck detected, entering backup mode")
+        lidar_blocked = self.lidar_front_distance <= SAFE_DISTANCE
+        camera_blocked = self.camera_center_obstacle
+        self.get_logger().info(
+            f"Stuck: lidar_front={self.lidar_front_distance:.2f}m "
+            f"(blocked={lidar_blocked}), camera_center={camera_blocked}, "
+            f"left={self.lidar_left_distance:.2f}, right={self.lidar_right_distance:.2f}"
+        )
 
     def execute_backup(self):
         if self.backup_iterations_remaining <= 0:
@@ -304,6 +311,8 @@ class AutonomousExplorer(Node):
         status_data = {
             "state": self.state.name.lower(),
             "lidar_front": round(self.lidar_front_distance, 2),
+            "lidar_left": round(self.lidar_left_distance, 2),
+            "lidar_right": round(self.lidar_right_distance, 2),
             "camera_left": self.camera_left_obstacle,
             "camera_center": self.camera_center_obstacle,
             "camera_right": self.camera_right_obstacle,

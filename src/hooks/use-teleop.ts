@@ -27,16 +27,22 @@ export function useTeleop({ ros, isConnected, isActive }: UseTeleopOptions): Tel
     if (!cmdVelTopicRef.current) return;
     const { linearX, angularZ } = velocityRef.current;
     cmdVelTopicRef.current.publish({
-      linear: { x: linearX, y: 0, z: 0 },
-      angular: { x: 0, y: 0, z: angularZ },
+      header: { stamp: { sec: 0, nanosec: 0 }, frame_id: "" },
+      twist: {
+        linear: { x: -linearX, y: 0, z: 0 },
+        angular: { x: 0, y: 0, z: -angularZ },
+      },
     });
   }, []);
 
   const publishZeroVelocity = useCallback(() => {
     if (!cmdVelTopicRef.current) return;
     cmdVelTopicRef.current.publish({
-      linear: { x: 0, y: 0, z: 0 },
-      angular: { x: 0, y: 0, z: 0 },
+      header: { stamp: { sec: 0, nanosec: 0 }, frame_id: "" },
+      twist: {
+        linear: { x: 0, y: 0, z: 0 },
+        angular: { x: 0, y: 0, z: 0 },
+      },
     });
   }, []);
 
@@ -54,7 +60,7 @@ export function useTeleop({ ros, isConnected, isActive }: UseTeleopOptions): Tel
     cmdVelTopicRef.current = new Topic({
       ros,
       name: "/cmd_vel",
-      messageType: "geometry_msgs/msg/Twist",
+      messageType: "geometry_msgs/msg/TwistStamped",
     });
 
     velocityRef.current = { linearX: 0, angularZ: 0 };

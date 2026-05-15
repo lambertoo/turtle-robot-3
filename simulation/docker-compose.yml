@@ -1,0 +1,18 @@
+services:
+  turtlebot3-sim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: turtlebot3-sim
+    environment:
+      - TURTLEBOT3_MODEL=waffle_pi
+      - DISPLAY=:99
+    ports:
+      - "9090:9090"
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: "4"
+    restart: unless-stopped

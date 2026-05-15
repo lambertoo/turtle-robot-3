@@ -16,17 +16,21 @@ cleanup() {
 }
 trap cleanup SIGTERM SIGINT
 
+ros2 daemon stop 2>/dev/null
+sleep 1
+
 chmod 666 /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
 
 mkdir -p /tmp/camera /home/ubuntu/maps
 
 ros2 launch turtlebot3_bringup robot.launch.py &
 BRINGUP_PID=$!
-sleep 10
+sleep 15
 
-ros2 service call /motor_power std_srvs/srv/SetBool '{data: true}' --spin-time 5 2>/dev/null
+timeout 10 ros2 service call /motor_power std_srvs/srv/SetBool '{data: true}' --spin-time 5 2>/dev/null
 sleep 2
 
+pkill -9 -f opencr-watchdog 2>/dev/null
 bash /usr/local/bin/opencr-watchdog.sh &
 WATCHDOG_PID=$!
 

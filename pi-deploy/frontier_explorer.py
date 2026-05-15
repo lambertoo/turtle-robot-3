@@ -74,6 +74,7 @@ class FrontierExplorer(Node):
         self.camera_right_obstacle = False
 
         self.lidar_front_distance = 99.0
+        self._exploration_loop_active = False
 
         callback_group = ReentrantCallbackGroup()
 
@@ -248,6 +249,15 @@ class FrontierExplorer(Node):
             pass
 
     def exploration_loop(self):
+        if self._exploration_loop_active:
+            return
+        self._exploration_loop_active = True
+        try:
+            self._run_exploration_step()
+        finally:
+            self._exploration_loop_active = False
+
+    def _run_exploration_step(self):
         if self.state == ExplorerState.IDLE or self.state == ExplorerState.STOPPED:
             return
 

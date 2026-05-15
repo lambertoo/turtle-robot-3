@@ -8,9 +8,15 @@ export interface UseMapSubscriptionOptions {
   isActive: boolean;
 }
 
+export interface RobotVelocity {
+  linearX: number;
+  angularZ: number;
+}
+
 export interface MapSubscriptionData {
   occupancyGrid: OccupancyGrid | null;
   robotPose: Pose | null;
+  robotVelocity: RobotVelocity | null;
 }
 
 export function useMapSubscription({
@@ -20,6 +26,7 @@ export function useMapSubscription({
 }: UseMapSubscriptionOptions): MapSubscriptionData {
   const [occupancyGrid, setOccupancyGrid] = useState<OccupancyGrid | null>(null);
   const [robotPose, setRobotPose] = useState<Pose | null>(null);
+  const [robotVelocity, setRobotVelocity] = useState<RobotVelocity | null>(null);
   const mapTopicRef = useRef<Topic | null>(null);
   const poseTopicRef = useRef<Topic | null>(null);
 
@@ -51,13 +58,21 @@ export function useMapSubscription({
 
     const poseTopic = new Topic({
       ros,
-      name: "/robot_pose",
-      messageType: "geometry_msgs/msg/Pose",
+      name: "/odom",
+      messageType: "nav_msgs/msg/Odometry",
       throttle_rate: 200,
     });
 
     poseTopic.subscribe((message: unknown) => {
-      setRobotPose(message as Pose);
+      const odomMessage = message as {
+        pose: { pose: Pose };
+        twist: { twist: { linear: { x: number; y: number; z: number }; angular: { x: number; y: number; z: number } } };
+      };
+      setRobotPose(odomMessage.pose.pose);
+      setRobotVelocity({
+        linearX: odomMessage.twist.twist.linear.x,
+        angularZ: odomMessage.twist.twist.angular.z,
+      });
     });
 
     poseTopicRef.current = poseTopic;
@@ -70,5 +85,5 @@ export function useMapSubscription({
     };
   }, [ros, isConnected, isActive]);
 
-  return { occupancyGrid, robotPose };
+  return { occupancyGrid, robotPose, robotVelocity };
 }

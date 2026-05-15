@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Ros, Topic } from "roslib";
+import { Ros, Topic, Service } from "roslib";
 
 interface RosConnection {
   ros: Ros | null;
@@ -19,10 +19,13 @@ function sendStopToRos(rosInstance: Ros) {
   const velocityPublisher = new Topic({
     ros: rosInstance,
     name: "/cmd_vel",
-    messageType: "geometry_msgs/msg/Twist",
+    messageType: "geometry_msgs/msg/TwistStamped",
   });
 
-  const zeroVelocity = { linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 0 } };
+  const zeroVelocity = {
+    header: { stamp: { sec: 0, nanosec: 0 }, frame_id: "" },
+    twist: { linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 0 } },
+  };
   velocityPublisher.publish(zeroVelocity);
   velocityPublisher.publish(zeroVelocity);
   velocityPublisher.publish(zeroVelocity);
@@ -35,6 +38,13 @@ function sendStopToRos(rosInstance: Ros) {
   cancelGoalPublisher.publish({
     goal_info: { goal_id: { uuid: [] }, stamp: { sec: 0, nanosec: 0 } },
   });
+
+  const motorPowerService = new Service({
+    ros: rosInstance,
+    name: "/motor_power",
+    serviceType: "std_srvs/srv/SetBool",
+  });
+  motorPowerService.callService({ data: false }, () => {}, () => {});
 }
 
 function StopOctagonIcon() {

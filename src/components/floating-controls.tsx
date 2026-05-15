@@ -89,7 +89,7 @@ export function FloatingControls({
         {modeButtons.map(({ mode, label, icon }) => (
           <button
             key={mode}
-            onClick={() => onActivateMode(mode)}
+            onClick={() => onActivateMode(activeMode === mode ? "idle" : mode)}
             title={label}
             disabled={!isConnected}
             className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all ${

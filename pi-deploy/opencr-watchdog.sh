@@ -2,36 +2,34 @@
 source /opt/ros/jazzy/setup.bash
 export TURTLEBOT3_MODEL=waffle_pi
 
-USB_DEVICE="1-1.3:1.0"
-DRIVER_PATH="/sys/bus/usb/drivers/cdc_acm"
-
-reset_opencr() {
-    echo "[watchdog] Resetting OpenCR USB device..."
-    echo "$USB_DEVICE" | sudo tee "$DRIVER_PATH/unbind" 2>/dev/null
-    sleep 2
-    echo "$USB_DEVICE" | sudo tee "$DRIVER_PATH/bind" 2>/dev/null
-    sleep 3
-    chmod 777 /dev/ttyACM* 2>/dev/null
-    echo "[watchdog] OpenCR USB reset complete"
-}
+RESTART_COUNT_FILE="/tmp/opencr_watchdog_restarts"
+MAX_RESTARTS=3
 
 echo "[watchdog] OpenCR watchdog started, monitoring turtlebot3_ros..."
 
-RESET_COUNT=0
-MAX_RESETS=3
+if [ -f /tmp/opencr_watchdog_boot_time ]; then
+    PREV_BOOT=$(cat /tmp/opencr_watchdog_boot_time)
+    NOW=$(date +%s)
+    if [ $((NOW - PREV_BOOT)) -gt 300 ]; then
+        echo "0" > "$RESTART_COUNT_FILE"
+    fi
+fi
+date +%s > /tmp/opencr_watchdog_boot_time
+
+sleep 30
 
 while true; do
     if ! pgrep -f "turtlebot3_ros" > /dev/null 2>&1; then
-        if [ $RESET_COUNT -lt $MAX_RESETS ]; then
-            echo "[watchdog] turtlebot3_ros is DOWN — resetting USB (attempt $((RESET_COUNT+1))/$MAX_RESETS)..."
-            reset_opencr
-            RESET_COUNT=$((RESET_COUNT+1))
+        COUNT=$(cat "$RESTART_COUNT_FILE" 2>/dev/null || echo "0")
+        if [ "$COUNT" -lt "$MAX_RESTARTS" ]; then
+            echo "$((COUNT + 1))" > "$RESTART_COUNT_FILE"
+            echo "[watchdog] turtlebot3_ros DOWN — full service restart (attempt $((COUNT+1))/$MAX_RESTARTS)"
+            systemctl restart turtlebot3 &
+            exit 0
         else
-            echo "[watchdog] Max resets reached, waiting for manual intervention..."
-            sleep 60
+            echo "[watchdog] Max restarts ($MAX_RESTARTS) reached. Manual intervention needed."
+            sleep 300
         fi
-    else
-        RESET_COUNT=0
     fi
     sleep 15
 done

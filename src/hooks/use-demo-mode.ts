@@ -5,10 +5,17 @@ import type { OccupancyGrid, Pose } from "@/lib/ros-types";
 
 const DEMO_GRID_SIZE = 100;
 const DEMO_RESOLUTION = 0.05;
-const PATROL_RADIUS = 2.0;
-const ROBOT_SPEED_RAD_PER_MS = (0.15 / PATROL_RADIUS) * (1 / 1000);
 const POSE_UPDATE_INTERVAL_MS = 200;
 const SLAM_REVEAL_INTERVAL_MS = 500;
+const ROBOT_LINEAR_SPEED = 0.0004;
+const WAYPOINT_REACHED_THRESHOLD = 0.05;
+
+export interface DemoPatrolState {
+  waypoints: Array<{ x: number; y: number }>;
+  isLooping: boolean;
+  isPatrolRunning: boolean;
+  currentWaypointIndex: number;
+}
 
 export interface DemoModeResult {
   isDemoMode: boolean;
@@ -16,6 +23,12 @@ export interface DemoModeResult {
   demoOccupancyGrid: OccupancyGrid | null;
   demoRobotPose: Pose | null;
   demoIsConnected: boolean;
+  patrolState: DemoPatrolState;
+  addWaypoint: (x: number, y: number) => void;
+  removeWaypoint: (index: number) => void;
+  clearWaypoints: () => void;
+  togglePatrolLoop: () => void;
+  startPatrol: () => void;
 }
 
 function buildBaseGridData(): number[] {
@@ -62,43 +75,77 @@ function buildBaseGridData(): number[] {
   return data;
 }
 
-function computeRevealedCells(angle: number): Set<number> {
-  const revealed = new Set<number>();
-  const centerRow = DEMO_GRID_SIZE / 2;
-  const centerCol = DEMO_GRID_SIZE / 2;
-  const revealRadius = 10 + (angle / (Math.PI * 8)) * (DEMO_GRID_SIZE / 2 - 10);
-  const clampedRadius = Math.min(revealRadius, DEMO_GRID_SIZE / 2 - 2);
+function revealAroundPosition(
+  baseData: number[],
+  previousData: number[],
+  robotWorldX: number,
+  robotWorldY: number,
+  revealRadius: number
+): number[] {
+  const originOffset = (DEMO_GRID_SIZE * DEMO_RESOLUTION) / 2;
+  const robotGridCol = Math.floor((robotWorldX + originOffset) / DEMO_RESOLUTION);
+  const robotGridRow = Math.floor((robotWorldY + originOffset) / DEMO_RESOLUTION);
+  const radiusCells = Math.floor(revealRadius / DEMO_RESOLUTION);
 
-  for (let row = 1; row < DEMO_GRID_SIZE - 1; row++) {
-    for (let col = 1; col < DEMO_GRID_SIZE - 1; col++) {
-      const distFromCenter = Math.sqrt(
-        Math.pow(row - centerRow, 2) + Math.pow(col - centerCol, 2)
-      );
-      if (distFromCenter <= clampedRadius) {
-        revealed.add(row * DEMO_GRID_SIZE + col);
+  const newData = [...previousData];
+  for (let row = 0; row < DEMO_GRID_SIZE; row++) {
+    for (let col = 0; col < DEMO_GRID_SIZE; col++) {
+      const dist = Math.sqrt(Math.pow(row - robotGridRow, 2) + Math.pow(col - robotGridCol, 2));
+      if (dist <= radiusCells) {
+        newData[row * DEMO_GRID_SIZE + col] = baseData[row * DEMO_GRID_SIZE + col];
       }
     }
   }
 
   for (let i = 0; i < DEMO_GRID_SIZE; i++) {
-    revealed.add(i);
-    revealed.add((DEMO_GRID_SIZE - 1) * DEMO_GRID_SIZE + i);
-    revealed.add(i * DEMO_GRID_SIZE);
-    revealed.add(i * DEMO_GRID_SIZE + DEMO_GRID_SIZE - 1);
+    newData[i] = baseData[i];
+    newData[(DEMO_GRID_SIZE - 1) * DEMO_GRID_SIZE + i] = baseData[(DEMO_GRID_SIZE - 1) * DEMO_GRID_SIZE + i];
+    newData[i * DEMO_GRID_SIZE] = baseData[i * DEMO_GRID_SIZE];
+    newData[i * DEMO_GRID_SIZE + DEMO_GRID_SIZE - 1] = baseData[i * DEMO_GRID_SIZE + DEMO_GRID_SIZE - 1];
   }
 
-  return revealed;
+  return newData;
 }
+
+const SLAM_EXPLORATION_PATH = [
+  { x: 0.0, y: 0.0 },
+  { x: 1.5, y: 0.0 },
+  { x: 1.5, y: 1.5 },
+  { x: -1.0, y: 1.5 },
+  { x: -1.0, y: -0.5 },
+  { x: 1.5, y: -1.5 },
+  { x: -1.5, y: -1.5 },
+  { x: -1.5, y: 1.0 },
+  { x: 0.5, y: 0.5 },
+  { x: 2.0, y: -1.0 },
+  { x: -2.0, y: -2.0 },
+  { x: -2.0, y: 2.0 },
+  { x: 2.0, y: 2.0 },
+  { x: 0.0, y: 0.0 },
+];
 
 export function useDemoMode(): DemoModeResult {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [demoRobotPose, setDemoRobotPose] = useState<Pose | null>(null);
   const [demoOccupancyGrid, setDemoOccupancyGrid] = useState<OccupancyGrid | null>(null);
+  const [patrolWaypoints, setPatrolWaypoints] = useState<Array<{ x: number; y: number }>>([]);
+  const [isLooping, setIsLooping] = useState(false);
+  const [isPatrolRunning, setIsPatrolRunning] = useState(false);
+  const [currentWaypointIndex, setCurrentWaypointIndex] = useState(0);
 
-  const patrolAngleRef = useRef(0);
   const baseGridDataRef = useRef<number[]>([]);
+  const revealedDataRef = useRef<number[]>([]);
+  const robotPositionRef = useRef({ x: 0, y: 0 });
+  const slamTargetIndexRef = useRef(0);
   const poseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const slamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const patrolIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const patrolWaypointIndexRef = useRef(0);
+  const isLoopingRef = useRef(false);
+
+  useEffect(() => {
+    isLoopingRef.current = isLooping;
+  }, [isLooping]);
 
   const stopIntervals = useCallback(() => {
     if (poseIntervalRef.current) {
@@ -109,23 +156,30 @@ export function useDemoMode(): DemoModeResult {
       clearInterval(slamIntervalRef.current);
       slamIntervalRef.current = null;
     }
+    if (patrolIntervalRef.current) {
+      clearInterval(patrolIntervalRef.current);
+      patrolIntervalRef.current = null;
+    }
+  }, []);
+
+  const makePoseFromPosition = useCallback((x: number, y: number, targetX: number, targetY: number): Pose => {
+    const headingAngle = Math.atan2(targetY - y, targetX - x);
+    return {
+      position: { x, y, z: 0 },
+      orientation: { x: 0, y: 0, z: Math.sin(headingAngle / 2), w: Math.cos(headingAngle / 2) },
+    };
   }, []);
 
   const startDemoSimulation = useCallback(() => {
     baseGridDataRef.current = buildBaseGridData();
-    patrolAngleRef.current = 0;
+    slamTargetIndexRef.current = 0;
+    robotPositionRef.current = { x: 0, y: 0 };
 
     const originX = -(DEMO_GRID_SIZE * DEMO_RESOLUTION) / 2;
     const originY = -(DEMO_GRID_SIZE * DEMO_RESOLUTION) / 2;
 
-    const initialData = baseGridDataRef.current.map((cell, index) => {
-      const row = Math.floor(index / DEMO_GRID_SIZE);
-      const col = index % DEMO_GRID_SIZE;
-      const centerRow = DEMO_GRID_SIZE / 2;
-      const centerCol = DEMO_GRID_SIZE / 2;
-      const dist = Math.sqrt(Math.pow(row - centerRow, 2) + Math.pow(col - centerCol, 2));
-      return dist <= 10 ? cell : -1;
-    });
+    const initialRevealed = new Array(DEMO_GRID_SIZE * DEMO_GRID_SIZE).fill(-1);
+    revealedDataRef.current = revealAroundPosition(baseGridDataRef.current, initialRevealed, 0, 0, 0.5);
 
     setDemoOccupancyGrid({
       info: {
@@ -137,45 +191,59 @@ export function useDemoMode(): DemoModeResult {
           orientation: { x: 0, y: 0, z: 0, w: 1 },
         },
       },
-      data: initialData,
+      data: revealedDataRef.current,
     });
 
     setDemoRobotPose({
-      position: { x: PATROL_RADIUS, y: 0, z: 0 },
+      position: { x: 0, y: 0, z: 0 },
       orientation: { x: 0, y: 0, z: 0, w: 1 },
     });
 
     poseIntervalRef.current = setInterval(() => {
-      patrolAngleRef.current += ROBOT_SPEED_RAD_PER_MS * POSE_UPDATE_INTERVAL_MS;
-      const angle = patrolAngleRef.current;
+      const currentPos = robotPositionRef.current;
+      const target = SLAM_EXPLORATION_PATH[slamTargetIndexRef.current];
 
-      const posX = PATROL_RADIUS * Math.cos(angle);
-      const posY = PATROL_RADIUS * Math.sin(angle);
+      const deltaX = target.x - currentPos.x;
+      const deltaY = target.y - currentPos.y;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-      const headingAngle = angle + Math.PI / 2;
-      const sinHalf = Math.sin(headingAngle / 2);
-      const cosHalf = Math.cos(headingAngle / 2);
+      const stepSize = ROBOT_LINEAR_SPEED * POSE_UPDATE_INTERVAL_MS;
 
-      setDemoRobotPose({
-        position: { x: posX, y: posY, z: 0 },
-        orientation: { x: 0, y: 0, z: sinHalf, w: cosHalf },
-      });
+      if (distance < WAYPOINT_REACHED_THRESHOLD || distance < stepSize) {
+        robotPositionRef.current = { x: target.x, y: target.y };
+        slamTargetIndexRef.current = (slamTargetIndexRef.current + 1) % SLAM_EXPLORATION_PATH.length;
+        const nextTarget = SLAM_EXPLORATION_PATH[slamTargetIndexRef.current];
+        setDemoRobotPose(makePoseFromPosition(target.x, target.y, nextTarget.x, nextTarget.y));
+        return;
+      }
+
+      const moveX = (deltaX / distance) * stepSize;
+      const moveY = (deltaY / distance) * stepSize;
+      robotPositionRef.current = { x: currentPos.x + moveX, y: currentPos.y + moveY };
+
+      setDemoRobotPose(makePoseFromPosition(
+        robotPositionRef.current.x,
+        robotPositionRef.current.y,
+        target.x,
+        target.y
+      ));
     }, POSE_UPDATE_INTERVAL_MS);
 
     slamIntervalRef.current = setInterval(() => {
-      const currentAngle = patrolAngleRef.current;
-      const revealed = computeRevealedCells(currentAngle);
-
-      const updatedData = baseGridDataRef.current.map((cell, index) => {
-        return revealed.has(index) ? cell : -1;
-      });
-
+      const pos = robotPositionRef.current;
+      revealedDataRef.current = revealAroundPosition(
+        baseGridDataRef.current,
+        revealedDataRef.current,
+        pos.x,
+        pos.y,
+        0.6
+      );
       setDemoOccupancyGrid((previous) => {
         if (!previous) return previous;
-        return { ...previous, data: updatedData };
+        return { ...previous, data: revealedDataRef.current };
       });
     }, SLAM_REVEAL_INTERVAL_MS);
-  }, []);
+  }, [makePoseFromPosition]);
 
   useEffect(() => {
     if (isDemoMode) {
@@ -184,6 +252,8 @@ export function useDemoMode(): DemoModeResult {
       stopIntervals();
       setDemoOccupancyGrid(null);
       setDemoRobotPose(null);
+      setIsPatrolRunning(false);
+      setCurrentWaypointIndex(0);
     }
 
     return stopIntervals;
@@ -193,11 +263,103 @@ export function useDemoMode(): DemoModeResult {
     setIsDemoMode((previous) => !previous);
   }, []);
 
+  const addWaypoint = useCallback((x: number, y: number) => {
+    if (isPatrolRunning) return;
+    setPatrolWaypoints((previous) => [...previous, { x, y }]);
+  }, [isPatrolRunning]);
+
+  const removeWaypoint = useCallback((index: number) => {
+    if (isPatrolRunning) return;
+    setPatrolWaypoints((previous) => previous.filter((_, i) => i !== index));
+  }, [isPatrolRunning]);
+
+  const clearWaypoints = useCallback(() => {
+    if (isPatrolRunning) return;
+    setPatrolWaypoints([]);
+  }, [isPatrolRunning]);
+
+  const togglePatrolLoop = useCallback(() => {
+    setIsLooping((previous) => !previous);
+  }, []);
+
+  const startPatrol = useCallback(() => {
+    if (patrolWaypoints.length < 2 || isPatrolRunning) return;
+
+    if (poseIntervalRef.current) {
+      clearInterval(poseIntervalRef.current);
+      poseIntervalRef.current = null;
+    }
+
+    setIsPatrolRunning(true);
+    patrolWaypointIndexRef.current = 0;
+    setCurrentWaypointIndex(0);
+
+    const firstWaypoint = patrolWaypoints[0];
+    robotPositionRef.current = { x: firstWaypoint.x, y: firstWaypoint.y };
+    setDemoRobotPose(makePoseFromPosition(firstWaypoint.x, firstWaypoint.y, patrolWaypoints[1].x, patrolWaypoints[1].y));
+    patrolWaypointIndexRef.current = 1;
+    setCurrentWaypointIndex(1);
+
+    patrolIntervalRef.current = setInterval(() => {
+      const currentPos = robotPositionRef.current;
+      const targetIndex = patrolWaypointIndexRef.current;
+      const target = patrolWaypoints[targetIndex];
+
+      const deltaX = target.x - currentPos.x;
+      const deltaY = target.y - currentPos.y;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      const stepSize = ROBOT_LINEAR_SPEED * POSE_UPDATE_INTERVAL_MS;
+
+      if (distance < WAYPOINT_REACHED_THRESHOLD || distance < stepSize) {
+        robotPositionRef.current = { x: target.x, y: target.y };
+        const nextIndex = targetIndex + 1;
+        if (nextIndex >= patrolWaypoints.length) {
+          if (isLoopingRef.current) {
+            patrolWaypointIndexRef.current = 0;
+            setCurrentWaypointIndex(0);
+          } else {
+            setDemoRobotPose(makePoseFromPosition(target.x, target.y, target.x, target.y + 1));
+            clearInterval(patrolIntervalRef.current!);
+            patrolIntervalRef.current = null;
+            setIsPatrolRunning(false);
+            setCurrentWaypointIndex(0);
+          }
+        } else {
+          patrolWaypointIndexRef.current = nextIndex;
+          setCurrentWaypointIndex(nextIndex);
+        }
+        return;
+      }
+
+      const moveX = (deltaX / distance) * stepSize;
+      const moveY = (deltaY / distance) * stepSize;
+      robotPositionRef.current = { x: currentPos.x + moveX, y: currentPos.y + moveY };
+
+      setDemoRobotPose(makePoseFromPosition(
+        robotPositionRef.current.x,
+        robotPositionRef.current.y,
+        target.x,
+        target.y
+      ));
+    }, POSE_UPDATE_INTERVAL_MS);
+  }, [patrolWaypoints, isPatrolRunning, makePoseFromPosition]);
+
   return {
     isDemoMode,
     toggleDemoMode,
     demoOccupancyGrid,
     demoRobotPose,
     demoIsConnected: isDemoMode,
+    patrolState: {
+      waypoints: patrolWaypoints,
+      isLooping,
+      isPatrolRunning,
+      currentWaypointIndex,
+    },
+    addWaypoint,
+    removeWaypoint,
+    clearWaypoints,
+    togglePatrolLoop,
+    startPatrol,
   };
 }

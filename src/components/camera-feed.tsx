@@ -10,7 +10,7 @@ export interface CameraFeedProps {
 }
 
 function buildStreamUrl(config: RobotConfig): string {
-  return `http://${config.ip}:${config.videoPort}/stream?topic=/camera/image_raw&type=mjpeg`;
+  return `http://${config.ip}:${config.videoPort}/?action=stream`;
 }
 
 function CameraIcon() {
@@ -50,7 +50,7 @@ export function CameraFeed({ robotConfig, isConnected }: CameraFeedProps) {
 
   return (
     <div
-      className="hud-panel absolute bottom-4 right-4 z-20 flex flex-col overflow-hidden rounded-xl"
+      className="hud-panel absolute top-4 right-4 z-20 flex flex-col overflow-hidden rounded-xl"
       style={{
         width: 320,
         border: "1px solid rgba(4, 104, 177, 0.5)",

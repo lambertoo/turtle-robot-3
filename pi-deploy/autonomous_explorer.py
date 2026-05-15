@@ -44,10 +44,10 @@ class AutonomousExplorer(Node):
 
         self.state = ExplorerState.IDLE
 
-        self.lidar_front_distance = float("inf")
-        self.lidar_left_distance = float("inf")
-        self.lidar_right_distance = float("inf")
-        self.lidar_rear_distance = float("inf")
+        self.lidar_front_distance = 99.0
+        self.lidar_left_distance = 99.0
+        self.lidar_right_distance = 99.0
+        self.lidar_rear_distance = 99.0
 
         self.camera_left_obstacle = False
         self.camera_center_obstacle = False
@@ -142,7 +142,7 @@ class AutonomousExplorer(Node):
             and ranges[i] > 0.05
         ]
         if not valid_readings:
-            return float("inf")
+            return 99.0
         return min(valid_readings)
 
     def run_camera_check(self):
@@ -310,6 +310,9 @@ class AutonomousExplorer(Node):
         status_message = String()
         status_message.data = json.dumps(status_data)
         self.status_publisher.publish(status_message)
+        if not hasattr(self, '_status_logged'):
+            self._status_logged = True
+            self.get_logger().info(f"First status published: {status_message.data}")
 
 
 def main(args=None):
@@ -317,12 +320,18 @@ def main(args=None):
     node = AutonomousExplorer()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
         pass
     finally:
-        node.publish_zero_velocity()
+        try:
+            node.publish_zero_velocity()
+        except Exception:
+            pass
         node.destroy_node()
-        rclpy.shutdown()
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

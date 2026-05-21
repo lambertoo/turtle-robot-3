@@ -1,0 +1,6 @@
+node_modules
+.next
+.git
+server-deploy/maps
+pi-deploy
+docs

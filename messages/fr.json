@@ -8,7 +8,8 @@
     "battery": "Batterie",
     "activeMode": "Mode actif",
     "idle": "En attente",
-    "language": "Langue"
+    "language": "Langue",
+    "services": "Services"
   },
   "operations": {
     "slam": {

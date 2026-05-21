@@ -1,0 +1,28 @@
+services:
+  turtlebot3-compute:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: turtlebot3-compute
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - TURTLEBOT3_MODEL=waffle_pi
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/usr/local/etc/fastdds_udp_only.xml
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+    volumes:
+      - ./maps:/home/maps
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: server-deploy/Dockerfile.dashboard
+    container_name: turtlebot3-dashboard
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

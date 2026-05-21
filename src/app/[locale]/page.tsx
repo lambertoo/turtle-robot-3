@@ -31,6 +31,7 @@ import { AttitudeIndicator } from "@/components/hud/attitude-indicator";
 import { EmergencyStopHud } from "@/components/hud/emergency-stop-hud";
 import { useCleaning } from "@/hooks/use-cleaning";
 import { CleaningControls } from "@/components/cleaning-controls";
+import { ServiceStatusPanel } from "@/components/service-status-panel";
 
 export default function OperatorPage() {
   const t = useTranslations("operations");
@@ -389,6 +390,8 @@ export default function OperatorPage() {
             onActivate={activateMode}
             clickToStopLabel={t("clickToStop")}
           />
+          <ServiceStatusPanel />
+
           <div className="mt-auto flex flex-col items-center gap-3 pt-4">
             <img src="/undp-logo.svg" alt="UNDP" className="h-42 opacity-80" />
             <EmergencyStopButton

@@ -404,11 +404,87 @@
     }
     .filter-chip.active { background: rgba(59,130,246,0.15); color: var(--blue); border-color: var(--blue); }
 
+    .left-col, .right-col {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .right-col {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .map-section {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      flex: 1;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .map-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .map-title {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text2);
+    }
+    .map-controls {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .map-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text2);
+      padding: 3px 8px; font-size: 10px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .map-btn:active { opacity: 0.7; }
+    .map-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .map-canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+    }
+    .map-canvas-wrap:active { cursor: grabbing; }
+    #mapCanvas {
+      position: absolute;
+      top: 0; left: 0;
+      image-rendering: pixelated;
+    }
+    .map-info {
+      position: absolute; bottom: 6px; left: 6px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 6px; padding: 3px 8px;
+      font-size: 9px; font-family: "SF Mono", monospace;
+      color: var(--text2);
+      display: flex; gap: 8px;
+    }
+    .map-scale {
+      position: absolute; bottom: 6px; right: 6px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 6px; padding: 3px 8px;
+      font-size: 9px; color: var(--text2);
+    }
+
     @media (orientation: landscape) {
       .main { flex-direction: row; }
-      .video-section { width: 55%; height: 100%; aspect-ratio: unset; }
-      .controls-section { width: 45%; padding: 8px 10px; gap: 8px; }
+      .left-col { width: 55%; height: 100%; }
+      .right-col { width: 45%; height: 100%; }
+      .video-section { aspect-ratio: unset; flex-shrink: 0; height: 50%; }
+      .map-section { min-height: 0; }
+      .controls-section { padding: 8px 10px; gap: 8px; }
       .joystick-row { min-height: 160px; }
+    }
+
+    @media (orientation: portrait) {
+      .map-section { min-height: 300px; max-height: 400px; }
     }
   </style>
 </head>
@@ -436,6 +512,7 @@
 </header>
 
 <div class="main">
+<div class="left-col">
 
   <div class="video-section">
     <div class="video-placeholder" id="videoPlaceholder">
@@ -486,6 +563,29 @@
       </div>
     </div>
   </div>
+
+  <div class="map-section">
+    <div class="map-header">
+      <span class="map-title">Carte SLAM (LiDAR + Odométrie)</span>
+      <div class="map-controls">
+        <button class="map-btn" onclick="mapZoomIn()">+</button>
+        <button class="map-btn" onclick="mapZoomOut()">-</button>
+        <button class="map-btn" onclick="mapCenter()">Centrer</button>
+        <button class="map-btn" onclick="mapClear()">Effacer</button>
+      </div>
+    </div>
+    <div class="map-canvas-wrap" id="mapWrap">
+      <canvas id="mapCanvas"></canvas>
+      <div class="map-info">
+        <span id="mapCells">0 cellules</span>
+        <span id="mapSize">10m x 10m</span>
+      </div>
+      <div class="map-scale" id="mapScaleLabel">1px = 2.5cm</div>
+    </div>
+  </div>
+
+</div>
+<div class="right-col">
 
   <div class="console-card">
     <div class="console-header">
@@ -610,6 +710,7 @@
 
   </div>
 
+</div>
 </div>
 
 <script src="../lib/rosbridge.js"></script>
@@ -1270,6 +1371,384 @@
     consoleLog("event", "connection", "Disconnected");
     _origOnDisconnected();
   };
+
+  // =====================
+  //   SLAM MAP ENGINE
+  // =====================
+  var MAP_RESOLUTION = 0.025;
+  var MAP_GRID_SIZE = 400;
+  var MAP_METERS = MAP_GRID_SIZE * MAP_RESOLUTION;
+  var mapGrid = new Uint8Array(MAP_GRID_SIZE * MAP_GRID_SIZE);
+  var mapOccupiedCount = 0;
+  var mapFreeCount = 0;
+
+  var mapRobotX = 0, mapRobotY = 0, mapRobotYaw = 0;
+  var mapTrail = [];
+  var mapTrailMax = 2000;
+
+  var mapViewOffsetX = 0, mapViewOffsetY = 0;
+  var mapZoom = 1.0;
+  var mapDragging = false;
+  var mapDragStartX = 0, mapDragStartY = 0;
+  var mapDragOffsetX = 0, mapDragOffsetY = 0;
+  var mapScanCount = 0;
+  var mapRenderPending = false;
+
+  var mapCanvas = document.getElementById("mapCanvas");
+  var mapCtx = mapCanvas.getContext("2d");
+  var mapWrap = document.getElementById("mapWrap");
+
+  function mapInit() {
+    mapResizeCanvas();
+    mapRenderFull();
+  }
+
+  function mapResizeCanvas() {
+    var rect = mapWrap.getBoundingClientRect();
+    mapCanvas.width = rect.width;
+    mapCanvas.height = rect.height;
+  }
+
+  window.addEventListener("resize", function() {
+    mapResizeCanvas();
+    mapRenderFull();
+  });
+
+  function mapGridIndex(gx, gy) {
+    return gy * MAP_GRID_SIZE + gx;
+  }
+
+  function mapWorldToGrid(wx, wy) {
+    var gx = Math.floor((wx / MAP_RESOLUTION) + MAP_GRID_SIZE / 2);
+    var gy = Math.floor((-wy / MAP_RESOLUTION) + MAP_GRID_SIZE / 2);
+    return { gx: gx, gy: gy };
+  }
+
+  function mapGridToCanvas(gx, gy) {
+    var cx = mapCanvas.width / 2 + (gx - MAP_GRID_SIZE / 2) * mapZoom + mapViewOffsetX;
+    var cy = mapCanvas.height / 2 + (gy - MAP_GRID_SIZE / 2) * mapZoom + mapViewOffsetY;
+    return { cx: cx, cy: cy };
+  }
+
+  function mapProcessScan(scanMsg) {
+    var ranges = scanMsg.ranges;
+    var n = ranges.length;
+    if (n === 0) return;
+
+    var rx = mapRobotX;
+    var ry = mapRobotY;
+    var ryaw = mapRobotYaw;
+    var robotGrid = mapWorldToGrid(rx, ry);
+
+    for (var i = 0; i < n; i += 2) {
+      var r = ranges[i];
+      if (!isFinite(r) || isNaN(r) || r < 0.08 || r > 3.5) continue;
+
+      var angle = scanMsg.angle_min + i * scanMsg.angle_increment + ryaw;
+      var wx = rx + r * Math.cos(angle);
+      var wy = ry + r * Math.sin(angle);
+      var hitGrid = mapWorldToGrid(wx, wy);
+
+      if (hitGrid.gx >= 0 && hitGrid.gx < MAP_GRID_SIZE && hitGrid.gy >= 0 && hitGrid.gy < MAP_GRID_SIZE) {
+        var idx = mapGridIndex(hitGrid.gx, hitGrid.gy);
+        if (mapGrid[idx] !== 2) {
+          mapGrid[idx] = 2;
+          mapOccupiedCount++;
+        }
+      }
+
+      mapBresenham(robotGrid.gx, robotGrid.gy, hitGrid.gx, hitGrid.gy);
+    }
+
+    mapScanCount++;
+
+    if (mapScanCount % 2 === 0) {
+      mapTrail.push({ x: rx, y: ry });
+      if (mapTrail.length > mapTrailMax) mapTrail.shift();
+    }
+
+    if (!mapRenderPending) {
+      mapRenderPending = true;
+      requestAnimationFrame(function() {
+        mapRenderPending = false;
+        mapRenderFull();
+      });
+    }
+
+    document.getElementById("mapCells").textContent = (mapOccupiedCount + mapFreeCount) + " cellules";
+  }
+
+  function mapBresenham(x0, y0, x1, y1) {
+    var dx = Math.abs(x1 - x0);
+    var dy = Math.abs(y1 - y0);
+    var sx = x0 < x1 ? 1 : -1;
+    var sy = y0 < y1 ? 1 : -1;
+    var err = dx - dy;
+
+    var steps = 0;
+    var maxSteps = dx + dy;
+
+    while (steps < maxSteps) {
+      if (x0 >= 0 && x0 < MAP_GRID_SIZE && y0 >= 0 && y0 < MAP_GRID_SIZE) {
+        var idx = mapGridIndex(x0, y0);
+        if (mapGrid[idx] === 0) {
+          mapGrid[idx] = 1;
+          mapFreeCount++;
+        }
+      }
+      if (x0 === x1 && y0 === y1) break;
+      var e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx) { err += dx; y0 += sy; }
+      steps++;
+    }
+  }
+
+  function mapRenderFull() {
+    var w = mapCanvas.width;
+    var h = mapCanvas.height;
+    mapCtx.fillStyle = "#0d0d0f";
+    mapCtx.fillRect(0, 0, w, h);
+
+    var startGX = Math.max(0, Math.floor((-mapViewOffsetX - w / 2) / mapZoom + MAP_GRID_SIZE / 2));
+    var endGX = Math.min(MAP_GRID_SIZE, Math.ceil((-mapViewOffsetX + w / 2) / mapZoom + MAP_GRID_SIZE / 2));
+    var startGY = Math.max(0, Math.floor((-mapViewOffsetY - h / 2) / mapZoom + MAP_GRID_SIZE / 2));
+    var endGY = Math.min(MAP_GRID_SIZE, Math.ceil((-mapViewOffsetY + h / 2) / mapZoom + MAP_GRID_SIZE / 2));
+
+    var cellSize = Math.max(1, Math.ceil(mapZoom));
+
+    for (var gy = startGY; gy < endGY; gy++) {
+      for (var gx = startGX; gx < endGX; gx++) {
+        var val = mapGrid[mapGridIndex(gx, gy)];
+        if (val === 0) continue;
+
+        var pos = mapGridToCanvas(gx, gy);
+        if (val === 1) {
+          mapCtx.fillStyle = "#1a1a22";
+        } else {
+          mapCtx.fillStyle = "#d0d0e0";
+        }
+        mapCtx.fillRect(pos.cx, pos.cy, cellSize, cellSize);
+      }
+    }
+
+    if (mapTrail.length > 1) {
+      mapCtx.beginPath();
+      mapCtx.strokeStyle = "rgba(59,130,246,0.3)";
+      mapCtx.lineWidth = 1;
+      for (var i = 0; i < mapTrail.length; i++) {
+        var tp = mapWorldToGrid(mapTrail[i].x, mapTrail[i].y);
+        var tc = mapGridToCanvas(tp.gx, tp.gy);
+        if (i === 0) mapCtx.moveTo(tc.cx, tc.cy);
+        else mapCtx.lineTo(tc.cx, tc.cy);
+      }
+      mapCtx.stroke();
+    }
+
+    var robotGridPos = mapWorldToGrid(mapRobotX, mapRobotY);
+    var robotCanvasPos = mapGridToCanvas(robotGridPos.gx, robotGridPos.gy);
+    var robotSize = Math.max(6, 4 * mapZoom);
+
+    mapCtx.beginPath();
+    mapCtx.arc(robotCanvasPos.cx, robotCanvasPos.cy, robotSize, 0, Math.PI * 2);
+    mapCtx.fillStyle = "#3b82f6";
+    mapCtx.fill();
+    mapCtx.strokeStyle = "#93c5fd";
+    mapCtx.lineWidth = 1.5;
+    mapCtx.stroke();
+
+    var headLen = robotSize * 2;
+    mapCtx.beginPath();
+    mapCtx.moveTo(robotCanvasPos.cx, robotCanvasPos.cy);
+    mapCtx.lineTo(
+      robotCanvasPos.cx + Math.cos(-mapRobotYaw) * headLen * mapZoom,
+      robotCanvasPos.cy + Math.sin(-mapRobotYaw) * headLen * mapZoom
+    );
+    mapCtx.strokeStyle = "#60a5fa";
+    mapCtx.lineWidth = 2;
+    mapCtx.stroke();
+
+    mapCtx.beginPath();
+    mapCtx.strokeStyle = "rgba(255,255,255,0.05)";
+    mapCtx.lineWidth = 0.5;
+    var originGrid = mapWorldToGrid(0, 0);
+    var originCanvas = mapGridToCanvas(originGrid.gx, originGrid.gy);
+    mapCtx.moveTo(originCanvas.cx, 0);
+    mapCtx.lineTo(originCanvas.cx, h);
+    mapCtx.moveTo(0, originCanvas.cy);
+    mapCtx.lineTo(w, originCanvas.cy);
+    mapCtx.stroke();
+
+    var scaleM = (1 / mapZoom) * MAP_RESOLUTION * 100;
+    document.getElementById("mapScaleLabel").textContent = "1px = " + scaleM.toFixed(1) + "cm";
+  }
+
+  function mapUpdateOdom(odomMsg) {
+    var pos = odomMsg.pose.pose.position;
+    var q = odomMsg.pose.pose.orientation;
+    mapRobotX = pos.x;
+    mapRobotY = pos.y;
+    mapRobotYaw = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+  }
+
+  function mapZoomIn() {
+    mapZoom = Math.min(8, mapZoom * 1.4);
+    mapRenderFull();
+  }
+
+  function mapZoomOut() {
+    mapZoom = Math.max(0.3, mapZoom / 1.4);
+    mapRenderFull();
+  }
+
+  function mapCenter() {
+    var robotGrid = mapWorldToGrid(mapRobotX, mapRobotY);
+    mapViewOffsetX = -(robotGrid.gx - MAP_GRID_SIZE / 2) * mapZoom;
+    mapViewOffsetY = -(robotGrid.gy - MAP_GRID_SIZE / 2) * mapZoom;
+    mapRenderFull();
+  }
+
+  function mapClear() {
+    mapGrid.fill(0);
+    mapOccupiedCount = 0;
+    mapFreeCount = 0;
+    mapTrail = [];
+    mapScanCount = 0;
+    mapRenderFull();
+    document.getElementById("mapCells").textContent = "0 cellules";
+  }
+
+  mapWrap.addEventListener("mousedown", function(e) {
+    if (e.target === mapCanvas) {
+      mapDragging = true;
+      mapDragStartX = e.clientX;
+      mapDragStartY = e.clientY;
+      mapDragOffsetX = mapViewOffsetX;
+      mapDragOffsetY = mapViewOffsetY;
+    }
+  });
+  window.addEventListener("mousemove", function(e) {
+    if (!mapDragging) return;
+    mapViewOffsetX = mapDragOffsetX + (e.clientX - mapDragStartX);
+    mapViewOffsetY = mapDragOffsetY + (e.clientY - mapDragStartY);
+    mapRenderFull();
+  });
+  window.addEventListener("mouseup", function() { mapDragging = false; });
+
+  var mapTouchStartDist = 0;
+  var mapTouchStartZoom = 1;
+  mapWrap.addEventListener("touchstart", function(e) {
+    if (e.target !== mapCanvas) return;
+    if (e.touches.length === 1) {
+      mapDragging = true;
+      mapDragStartX = e.touches[0].clientX;
+      mapDragStartY = e.touches[0].clientY;
+      mapDragOffsetX = mapViewOffsetX;
+      mapDragOffsetY = mapViewOffsetY;
+    } else if (e.touches.length === 2) {
+      mapDragging = false;
+      var dx = e.touches[0].clientX - e.touches[1].clientX;
+      var dy = e.touches[0].clientY - e.touches[1].clientY;
+      mapTouchStartDist = Math.sqrt(dx * dx + dy * dy);
+      mapTouchStartZoom = mapZoom;
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  mapWrap.addEventListener("touchmove", function(e) {
+    if (e.touches.length === 1 && mapDragging) {
+      mapViewOffsetX = mapDragOffsetX + (e.touches[0].clientX - mapDragStartX);
+      mapViewOffsetY = mapDragOffsetY + (e.touches[0].clientY - mapDragStartY);
+      mapRenderFull();
+    } else if (e.touches.length === 2) {
+      var dx = e.touches[0].clientX - e.touches[1].clientX;
+      var dy = e.touches[0].clientY - e.touches[1].clientY;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      mapZoom = Math.max(0.3, Math.min(8, mapTouchStartZoom * (dist / mapTouchStartDist)));
+      mapRenderFull();
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  mapWrap.addEventListener("touchend", function(e) {
+    if (e.touches.length === 0) mapDragging = false;
+  });
+
+  mapWrap.addEventListener("wheel", function(e) {
+    e.preventDefault();
+    var factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    mapZoom = Math.max(0.3, Math.min(8, mapZoom * factor));
+    mapRenderFull();
+  }, { passive: false });
+
+  // Hook odom into map
+  var _origSubscribeOdom = subscribeOdom;
+  subscribeOdom = function() {
+    bridge.subscribe("/odom", "nav_msgs/msg/Odometry", function(msg) {
+      mapUpdateOdom(msg);
+
+      var pos = msg.pose.pose.position;
+      document.getElementById("odomX").textContent = pos.x.toFixed(2);
+      document.getElementById("odomY").textContent = pos.y.toFixed(2);
+
+      var q = msg.pose.pose.orientation;
+      var yaw = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+      document.getElementById("odomHdg").textContent = (yaw * 180 / Math.PI).toFixed(0) + "°";
+
+      var lx = msg.twist.twist.linear.x;
+      var ly = msg.twist.twist.linear.y;
+      var speed = Math.sqrt(lx * lx + ly * ly);
+      document.getElementById("odomSpd").textContent = speed.toFixed(2);
+    }, 200);
+  };
+
+  // Hook scan into map
+  var _origSubscribeLidar = subscribeLidar;
+  subscribeLidar = function() {
+    bridge.subscribe("/scan_reliable", "sensor_msgs/msg/LaserScan", function(msg) {
+      mapProcessScan(msg);
+
+      var ranges = msg.ranges;
+      var n = ranges.length;
+      if (n === 0) return;
+
+      var sector = Math.floor(n / 12);
+      var quarter = Math.floor(n / 4);
+      var front = minValidRange(ranges, 0, sector, n - sector, n);
+      var left  = minValidSingle(ranges, sector, quarter);
+      var right = minValidSingle(ranges, n - quarter, n - sector);
+      frontDistance = front;
+
+      var hudFront = document.getElementById("hudFront");
+      var frontText = front > 10 ? "∞" : front.toFixed(2);
+      hudFront.textContent = frontText + "m";
+      hudFront.className = "hud-val " + (front < DANGER_DIST ? "red" : front < WARN_DIST ? "yellow" : "");
+
+      updateLidarCell("Front", front, "lidarCellFront");
+      updateLidarCell("Left",  left,  "lidarCellLeft");
+      updateLidarCell("Right", right, "lidarCellRight");
+
+      var banner = document.getElementById("collisionBanner");
+      var minAll = Math.min(front, left, right);
+      if (minAll < DANGER_DIST) {
+        banner.className = "lidar-warn-banner visible";
+      } else {
+        banner.className = "lidar-warn-banner";
+      }
+
+      radarPoints = [];
+      var step = Math.max(1, Math.floor(n / 120));
+      for (var i = 0; i < n; i += step) {
+        var r = ranges[i];
+        if (!isFinite(r) || isNaN(r) || r < 0.05 || r > 4.0) continue;
+        var angle = msg.angle_min + i * msg.angle_increment;
+        radarPoints.push({ r: r, angle: angle });
+      }
+      drawRadar();
+    }, 150);
+  };
+
+  setTimeout(mapInit, 100);
 </script>
 
 </body>

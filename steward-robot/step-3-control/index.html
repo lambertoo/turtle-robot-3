@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Steward Robot — Étape 3 : Pilotage complet</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #18181c;
+      --surface2: #23232a;
+      --border: #2e2e38;
+      --text: #f0f0f5;
+      --text2: #8888a0;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --radius: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    header {
+      padding: 10px 16px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .back-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text2);
+      padding: 5px 10px; font-size: 12px;
+      cursor: pointer; text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .back-btn:active { opacity: 0.7; }
+    header h1 { font-size: 15px; font-weight: 700; }
+    header p { font-size: 10px; color: var(--text2); margin-top: 1px; }
+
+    .conn-pill {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 4px 10px; font-size: 11px;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text2); }
+    .dot.connected { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .dot.error { background: var(--red); }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .video-section {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #000;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .video-section img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+    .video-placeholder {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 6px; color: var(--text2); font-size: 12px;
+    }
+    .video-placeholder .icon { font-size: 28px; }
+
+    .cam-badge {
+      position: absolute; top: 8px; left: 8px;
+      background: rgba(0,0,0,0.7); border-radius: 6px;
+      padding: 3px 8px; font-size: 10px; color: var(--text2);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .rec-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--red); animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .radar-overlay {
+      position: absolute;
+      bottom: 8px; right: 8px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .hud-overlay {
+      position: absolute; top: 8px; right: 8px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .hud-item {
+      background: rgba(0,0,0,0.7);
+      border-radius: 6px; padding: 4px 8px;
+      font-size: 10px; font-family: "SF Mono", monospace;
+      display: flex; align-items: center; gap: 5px;
+      white-space: nowrap;
+    }
+    .hud-label { color: var(--text2); }
+    .hud-val { font-weight: 700; }
+    .hud-val.green { color: var(--green); }
+    .hud-val.yellow { color: var(--yellow); }
+    .hud-val.red { color: var(--red); }
+
+    .odom-overlay {
+      position: absolute; bottom: 8px; left: 8px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 8px; padding: 6px 10px;
+      font-size: 10px; font-family: "SF Mono", monospace;
+      display: flex; gap: 10px;
+    }
+    .odom-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .odom-label { color: var(--text2); font-size: 9px; }
+    .odom-val { font-weight: 700; font-size: 11px; }
+
+    .controls-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 14px;
+      gap: 10px;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .speed-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      flex-shrink: 0;
+    }
+    .speed-bar label { font-size: 11px; color: var(--text2); white-space: nowrap; }
+    .speed-bar input[type="range"] {
+      flex: 1; -webkit-appearance: none;
+      height: 5px; background: var(--border);
+      border-radius: 3px; outline: none;
+    }
+    .speed-bar input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--blue); cursor: pointer;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+    }
+    .speed-val {
+      font-size: 14px; font-weight: 700; color: var(--blue);
+      min-width: 55px; text-align: right;
+    }
+
+    .joystick-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      min-height: 200px;
+    }
+
+    .joystick-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 6px;
+    }
+    .dir-label {
+      font-size: 12px; color: var(--text2);
+      min-height: 18px; text-align: center;
+    }
+
+    .vel-stack {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .vel-mini {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px;
+      text-align: center; min-width: 80px;
+    }
+    .vel-mini-label { font-size: 9px; color: var(--text2); margin-bottom: 3px; }
+    .vel-mini-val { font-size: 16px; font-weight: 700; }
+
+    .stop-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--red);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.1s, transform 0.1s;
+    }
+    .stop-btn:active { opacity: 0.8; transform: scale(0.98); }
+
+    .nav-row {
+      display: flex; gap: 8px; flex-shrink: 0;
+    }
+    .nav-btn {
+      flex: 1; padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text2);
+      font-size: 12px; font-weight: 600;
+      text-align: center; text-decoration: none;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn:active { opacity: 0.75; }
+
+    .not-connected-overlay {
+      position: fixed; inset: 0;
+      background: rgba(13,13,15,0.92);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; z-index: 100; padding: 24px; text-align: center;
+    }
+    .not-connected-overlay .icon { font-size: 48px; }
+    .not-connected-overlay p { color: var(--text2); font-size: 14px; line-height: 1.5; }
+    .not-connected-overlay a {
+      background: var(--blue); color: #fff;
+      border-radius: 12px; padding: 14px 28px;
+      text-decoration: none; font-weight: 700; font-size: 15px;
+    }
+
+    .lidar-warn-banner {
+      display: none;
+      align-items: center; gap: 6px;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.4);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px; font-weight: 600;
+      color: var(--red);
+      flex-shrink: 0;
+    }
+    .lidar-warn-banner.visible { display: flex; }
+
+    @media (orientation: landscape) {
+      .main { flex-direction: row; }
+      .video-section { width: 55%; height: 100%; aspect-ratio: unset; }
+      .controls-section { width: 45%; padding: 8px 10px; gap: 8px; }
+      .joystick-row { min-height: 160px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="not-connected-overlay" id="overlay">
+  <div class="icon">🔌</div>
+  <h2>Non connecté</h2>
+  <p>Retourne à l'étape 0 pour te connecter au robot.</p>
+  <a href="../step-0-connect/">← Étape 0 : Connexion</a>
+</div>
+
+<header>
+  <div class="header-left">
+    <a class="back-btn" href="../step-2-sensors/">← Retour</a>
+    <div>
+      <h1>Étape 3 — Pilotage</h1>
+      <p>Contrôle complet</p>
+    </div>
+  </div>
+  <div class="conn-pill">
+    <div class="dot" id="dot"></div>
+    <span id="connLabel">—</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="video-section">
+    <div class="video-placeholder" id="videoPlaceholder">
+      <div class="icon">📷</div>
+      <p>Chargement caméra...</p>
+    </div>
+    <img id="cameraImg" src="" alt="Camera" style="display:none"
+         onload="onCamLoad()" onerror="onCamError()" />
+
+    <div class="cam-badge" id="camBadge" style="display:none">
+      <div class="rec-dot"></div>
+      <span>LIVE</span>
+    </div>
+
+    <canvas id="radarMini" class="radar-overlay" width="120" height="120"></canvas>
+
+    <div class="hud-overlay">
+      <div class="hud-item">
+        <span class="hud-label">BAT</span>
+        <span class="hud-val green" id="hudBatt">—V</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">YAW</span>
+        <span class="hud-val" id="hudYaw">—°</span>
+      </div>
+      <div class="hud-item" id="hudFrontWrap">
+        <span class="hud-label">AVT</span>
+        <span class="hud-val" id="hudFront">—m</span>
+      </div>
+    </div>
+
+    <div class="odom-overlay">
+      <div class="odom-item">
+        <span class="odom-label">X</span>
+        <span class="odom-val" id="odomX">0.00</span>
+      </div>
+      <div class="odom-item">
+        <span class="odom-label">Y</span>
+        <span class="odom-val" id="odomY">0.00</span>
+      </div>
+      <div class="odom-item">
+        <span class="odom-label">HDG</span>
+        <span class="odom-val" id="odomHdg">0°</span>
+      </div>
+      <div class="odom-item">
+        <span class="odom-label">VIT</span>
+        <span class="odom-val" id="odomSpd">0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-section">
+
+    <div class="lidar-warn-banner" id="collisionBanner">
+      ⚠ Obstacle proche !
+    </div>
+
+    <div class="speed-bar">
+      <label>Vitesse</label>
+      <input type="range" id="speedSlider" min="0.05" max="0.3" step="0.01" value="0.15"
+             oninput="onSpeedChange(this.value)" />
+      <div class="speed-val" id="speedVal">0.15</div>
+    </div>
+
+    <div class="joystick-row">
+      <div class="vel-stack">
+        <div class="vel-mini">
+          <div class="vel-mini-label">LIN</div>
+          <div class="vel-mini-val" id="velLin">0.00</div>
+        </div>
+        <div class="vel-mini">
+          <div class="vel-mini-label">ANG</div>
+          <div class="vel-mini-val" id="velAng">0.00</div>
+        </div>
+      </div>
+
+      <div class="joystick-wrap">
+        <canvas id="joystickCanvas" width="220" height="220" style="touch-action:none;cursor:grab;border-radius:50%;"></canvas>
+        <div class="dir-label" id="dirLabel">— Neutre —</div>
+      </div>
+    </div>
+
+    <button class="stop-btn" id="stopBtn" ontouchstart="emergencyStop(event)" onclick="emergencyStop(event)">STOP</button>
+
+    <div class="nav-row">
+      <a class="nav-btn" href="../step-2-sensors/">← Capteurs</a>
+      <a class="nav-btn" href="../step-0-connect/">Connexion</a>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="../lib/rosbridge.js"></script>
+<script>
+  const bridge = new RosBridge();
+  let robotIp = "";
+  let maxLinear = 0.15;
+  let maxAngular = 0.8;
+  let currentLinear = 0;
+  let currentAngular = 0;
+  let publishInterval = null;
+  let frontDistance = 99;
+
+  const CANVAS_SIZE = 220;
+  const CENTER = CANVAS_SIZE / 2;
+  const OUTER_R = CENTER - 8;
+  const KNOB_R = 24;
+  const DEAD_ZONE = 0.12;
+  let joystickActive = false;
+  let knobX = CENTER;
+  let knobY = CENTER;
+
+  const WARN_DIST = 0.6;
+  const DANGER_DIST = 0.35;
+  let radarPoints = [];
+
+  const DIR_LABELS = [
+    "⬆ Avant", "↗ Avant-Droite", "➡ Droite", "↘ Arr.-Droite",
+    "⬇ Arrière", "↙ Arr.-Gauche", "⬅ Gauche", "↖ Avant-Gauche",
+  ];
+
+  window.addEventListener("load", () => {
+    drawJoystick(CENTER, CENTER, false);
+    drawRadar();
+    robotIp = localStorage.getItem("steward_robot_ip") || "";
+    if (!robotIp) return;
+
+    document.getElementById("connLabel").textContent = "Connexion...";
+    bridge.onConnect = onConnected;
+    bridge.onDisconnect = onDisconnected;
+    bridge.onError = () => onDisconnected();
+    bridge.connect("ws://" + robotIp + ":9090");
+  });
+
+  function onConnected() {
+    document.getElementById("overlay").style.display = "none";
+    document.getElementById("dot").className = "dot connected";
+    document.getElementById("connLabel").textContent = robotIp;
+    loadCamera();
+    subscribeLidar();
+    subscribeIMU();
+    subscribeBattery();
+    subscribeOdom();
+    startPublishLoop();
+  }
+
+  function onDisconnected() {
+    document.getElementById("dot").className = "dot error";
+    document.getElementById("connLabel").textContent = "Déconnecté";
+    stopPublishLoop();
+  }
+
+  function loadCamera() {
+    if (!robotIp) return;
+    var img = document.getElementById("cameraImg");
+    img.src = "http://" + robotIp + ":8080/?action=stream";
+    img.style.display = "block";
+    document.getElementById("videoPlaceholder").style.display = "none";
+  }
+
+  function onCamLoad() {
+    document.getElementById("camBadge").style.display = "flex";
+  }
+
+  function onCamError() {
+    document.getElementById("videoPlaceholder").innerHTML =
+      '<div class="icon">📷</div><p>Caméra indisponible</p>';
+    document.getElementById("videoPlaceholder").style.display = "flex";
+    document.getElementById("cameraImg").style.display = "none";
+    document.getElementById("camBadge").style.display = "none";
+  }
+
+  function onSpeedChange(val) {
+    maxLinear = parseFloat(val);
+    document.getElementById("speedVal").textContent = maxLinear.toFixed(2);
+  }
+
+  // --- Battery
+  function subscribeBattery() {
+    bridge.subscribe("/battery_state", "sensor_msgs/msg/BatteryState", function(msg) {
+      var voltage = msg.voltage ? msg.voltage.toFixed(1) : "—";
+      var el = document.getElementById("hudBatt");
+      el.textContent = voltage + "V";
+      var v = parseFloat(voltage);
+      if (isNaN(v)) return;
+      var pct = Math.max(0, Math.min(100, Math.round((v - 9.6) / (12.6 - 9.6) * 100)));
+      el.className = "hud-val " + (pct > 50 ? "green" : pct > 20 ? "yellow" : "red");
+    }, 2000);
+  }
+
+  // --- IMU
+  function subscribeIMU() {
+    bridge.subscribe("/imu", "sensor_msgs/msg/Imu", function(msg) {
+      var q = msg.orientation;
+      if (!q) return;
+      var yaw = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+      var yawDeg = (yaw * 180 / Math.PI).toFixed(0);
+      document.getElementById("hudYaw").textContent = yawDeg + "°";
+    }, 300);
+  }
+
+  // --- Odometry
+  function subscribeOdom() {
+    bridge.subscribe("/odom", "nav_msgs/msg/Odometry", function(msg) {
+      var pos = msg.pose.pose.position;
+      document.getElementById("odomX").textContent = pos.x.toFixed(2);
+      document.getElementById("odomY").textContent = pos.y.toFixed(2);
+
+      var q = msg.pose.pose.orientation;
+      var yaw = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+      document.getElementById("odomHdg").textContent = (yaw * 180 / Math.PI).toFixed(0) + "°";
+
+      var lx = msg.twist.twist.linear.x;
+      var ly = msg.twist.twist.linear.y;
+      var speed = Math.sqrt(lx * lx + ly * ly);
+      document.getElementById("odomSpd").textContent = speed.toFixed(2);
+    }, 200);
+  }
+
+  // --- LiDAR
+  function subscribeLidar() {
+    bridge.subscribe("/scan_reliable", "sensor_msgs/msg/LaserScan", function(msg) {
+      var ranges = msg.ranges;
+      var n = ranges.length;
+      if (n === 0) return;
+
+      var sector = Math.floor(n / 12);
+      var front = minValidRange(ranges, 0, sector, n - sector, n);
+      frontDistance = front;
+
+      var hudFront = document.getElementById("hudFront");
+      var frontText = front > 10 ? "∞" : front.toFixed(2);
+      hudFront.textContent = frontText + "m";
+      hudFront.className = "hud-val " + (front < DANGER_DIST ? "red" : front < WARN_DIST ? "yellow" : "");
+
+      var banner = document.getElementById("collisionBanner");
+      if (front < DANGER_DIST) {
+        banner.className = "lidar-warn-banner visible";
+      } else {
+        banner.className = "lidar-warn-banner";
+      }
+
+      radarPoints = [];
+      var step = Math.max(1, Math.floor(n / 120));
+      for (var i = 0; i < n; i += step) {
+        var r = ranges[i];
+        if (!isFinite(r) || isNaN(r) || r < 0.05 || r > 4.0) continue;
+        var angle = msg.angle_min + i * msg.angle_increment;
+        radarPoints.push({ r: r, angle: angle });
+      }
+      drawRadar();
+    }, 150);
+  }
+
+  function minValidRange(ranges, s1, e1, s2, e2) {
+    var min = 99;
+    for (var i = s1; i < e1; i++) {
+      var v = ranges[i];
+      if (isFinite(v) && v > 0.05 && v < min) min = v;
+    }
+    for (var i = s2; i < e2; i++) {
+      var v = ranges[i];
+      if (isFinite(v) && v > 0.05 && v < min) min = v;
+    }
+    return min;
+  }
+
+  // --- Mini Radar
+  function drawRadar() {
+    var canvas = document.getElementById("radarMini");
+    var ctx = canvas.getContext("2d");
+    var cx = 60, cy = 60, maxR = 52, maxDist = 3.0;
+
+    ctx.clearRect(0, 0, 120, 120);
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR * 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.beginPath(); ctx.moveTo(cx, cy - maxR); ctx.lineTo(cx, cy + maxR); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - maxR, cy); ctx.lineTo(cx + maxR, cy); ctx.stroke();
+
+    for (var i = 0; i < radarPoints.length; i++) {
+      var pt = radarPoints[i];
+      var dist = Math.min(pt.r, maxDist);
+      var px = cx + Math.cos(pt.angle - Math.PI / 2) * (dist / maxDist) * maxR;
+      var py = cy + Math.sin(pt.angle - Math.PI / 2) * (dist / maxDist) * maxR;
+      var hue = dist < DANGER_DIST ? 0 : dist < WARN_DIST ? 40 : 140;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = "hsl(" + hue + ",80%,60%)";
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "#3b82f6";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy - 12);
+    ctx.strokeStyle = "#3b82f6";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // --- Joystick
+  var canvas = document.getElementById("joystickCanvas");
+  var ctx = canvas.getContext("2d");
+
+  function getCanvasPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return {
+      x: (src.clientX - rect.left) * (CANVAS_SIZE / rect.width),
+      y: (src.clientY - rect.top) * (CANVAS_SIZE / rect.height),
+    };
+  }
+
+  function clampKnob(x, y) {
+    var dx = x - CENTER, dy = y - CENTER;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > OUTER_R) return { x: CENTER + dx / dist * OUTER_R, y: CENTER + dy / dist * OUTER_R };
+    return { x: x, y: y };
+  }
+
+  function drawJoystick(kx, ky, active) {
+    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+    for (var i = 0; i < 8; i++) {
+      var startAngle = (i * 45 - 22.5) * Math.PI / 180 - Math.PI / 2;
+      var endAngle = startAngle + 45 * Math.PI / 180;
+      ctx.beginPath();
+      ctx.moveTo(CENTER, CENTER);
+      ctx.arc(CENTER, CENTER, OUTER_R, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = i % 2 === 0 ? "rgba(59,130,246,0.06)" : "rgba(255,255,255,0.02)";
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(CENTER, CENTER, OUTER_R, 0, Math.PI * 2);
+    ctx.strokeStyle = active ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(CENTER, CENTER, OUTER_R * DEAD_ZONE, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    var dirArrows = ["↑","↗","→","↘","↓","↙","←","↖"];
+    for (var i = 0; i < 8; i++) {
+      var angle = (i * 45 - 90) * Math.PI / 180;
+      var tx = CENTER + Math.cos(angle) * (OUTER_R - 18);
+      var ty = CENTER + Math.sin(angle) * (OUTER_R - 18);
+      ctx.font = "bold 14px sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(dirArrows[i], tx, ty);
+    }
+
+    if (active) {
+      ctx.beginPath();
+      ctx.moveTo(CENTER, CENTER);
+      ctx.lineTo(kx, ky);
+      ctx.strokeStyle = "rgba(59,130,246,0.4)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(kx, ky, KNOB_R + 3, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fill();
+
+    var grad = ctx.createRadialGradient(kx - 3, ky - 3, 2, kx, ky, KNOB_R);
+    grad.addColorStop(0, active ? "#60a5fa" : "#4b5563");
+    grad.addColorStop(1, active ? "#1d4ed8" : "#1f2937");
+    ctx.beginPath();
+    ctx.arc(kx, ky, KNOB_R, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = active ? "rgba(147,197,253,0.6)" : "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function computeVelocity(kx, ky) {
+    var dx = kx - CENTER, dy = ky - CENTER;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var norm = dist / OUTER_R;
+    if (norm < DEAD_ZONE) return { lin: 0, ang: 0, sector: -1 };
+
+    var angle = Math.atan2(dx, -dy);
+    var deg = angle * 180 / Math.PI;
+    if (deg < 0) deg += 360;
+    var sector = Math.round(deg / 45) % 8;
+
+    var DIAG = 0.707;
+    var sectorMap = [
+      [1, 0], [DIAG, -DIAG], [0, -1], [-DIAG, -DIAG],
+      [-1, 0], [-DIAG, DIAG], [0, 1], [DIAG, DIAG],
+    ];
+
+    var linFactor = sectorMap[sector][0];
+    var angFactor = sectorMap[sector][1];
+    var magnitude = Math.min(norm, 1.0);
+    return {
+      lin: linFactor * maxLinear * magnitude,
+      ang: angFactor * maxAngular * magnitude,
+      sector: sector,
+    };
+  }
+
+  function onJoystickMove(kx, ky) {
+    var clamped = clampKnob(kx, ky);
+    knobX = clamped.x;
+    knobY = clamped.y;
+    drawJoystick(knobX, knobY, true);
+
+    var vel = computeVelocity(knobX, knobY);
+    currentLinear = vel.lin;
+    currentAngular = vel.ang;
+    document.getElementById("velLin").textContent = Math.abs(currentLinear).toFixed(2);
+    document.getElementById("velAng").textContent = Math.abs(currentAngular).toFixed(2);
+    document.getElementById("dirLabel").textContent = vel.sector >= 0 ? DIR_LABELS[vel.sector] : "— Neutre —";
+  }
+
+  function onJoystickRelease() {
+    joystickActive = false;
+    knobX = CENTER; knobY = CENTER;
+    currentLinear = 0; currentAngular = 0;
+    drawJoystick(CENTER, CENTER, false);
+    document.getElementById("velLin").textContent = "0.00";
+    document.getElementById("velAng").textContent = "0.00";
+    document.getElementById("dirLabel").textContent = "— Neutre —";
+    publishVelocity(0, 0);
+  }
+
+  canvas.addEventListener("touchstart", function(e) {
+    e.preventDefault();
+    joystickActive = true;
+    var pos = getCanvasPos(e);
+    onJoystickMove(pos.x, pos.y);
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", function(e) {
+    e.preventDefault();
+    if (!joystickActive) return;
+    var pos = getCanvasPos(e);
+    onJoystickMove(pos.x, pos.y);
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", function(e) {
+    e.preventDefault();
+    onJoystickRelease();
+  }, { passive: false });
+
+  canvas.addEventListener("mousedown", function(e) {
+    joystickActive = true;
+    onJoystickMove(getCanvasPos(e).x, getCanvasPos(e).y);
+  });
+  canvas.addEventListener("mousemove", function(e) {
+    if (!joystickActive) return;
+    onJoystickMove(getCanvasPos(e).x, getCanvasPos(e).y);
+  });
+  canvas.addEventListener("mouseup", function() { onJoystickRelease(); });
+  canvas.addEventListener("mouseleave", function() { if (joystickActive) onJoystickRelease(); });
+
+  function emergencyStop(e) {
+    if (e) e.preventDefault();
+    currentLinear = 0;
+    currentAngular = 0;
+    onJoystickRelease();
+    publishVelocity(0, 0);
+    publishVelocity(0, 0);
+    var btn = document.getElementById("stopBtn");
+    btn.style.background = "#991b1b";
+    setTimeout(function() { btn.style.background = ""; }, 200);
+  }
+
+  // --- Publish loop
+  function startPublishLoop() {
+    if (publishInterval) return;
+    publishInterval = setInterval(function() {
+      publishVelocity(currentLinear, currentAngular);
+    }, 100);
+  }
+
+  function stopPublishLoop() {
+    if (publishInterval) { clearInterval(publishInterval); publishInterval = null; }
+  }
+
+  function publishVelocity(lin, ang) {
+    bridge.publish("/cmd_vel", "geometry_msgs/msg/TwistStamped", {
+      header: { stamp: { sec: 0, nanosec: 0 }, frame_id: "base_link" },
+      twist: {
+        linear: { x: -lin, y: 0, z: 0 },
+        angular: { x: 0, y: 0, z: -ang },
+      }
+    });
+  }
+</script>
+
+</body>
+</html>

@@ -10,6 +10,7 @@ steward-robot/
   step-0-connect/     ← Connexion + état du robot (batterie, IMU, topics)
   step-1-motors/      ← Contrôle moteurs (D-Pad + joystick)
   step-2-sensors/     ← LiDAR overlay + flux caméra
+  step-3-control/     ← Pilotage complet (caméra + radar + joystick + HUD)
   lib/
     rosbridge.js      ← Client rosbridge partagé (roslibjs)
 ```

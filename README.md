@@ -545,7 +545,7 @@ Open `http://<laptop-ip>:8888/step-0-connect/` on a phone or browser.
 | `step-0-connect` | Connection status, battery, IMU, topic availability |
 | `step-1-motors` | Motor control with D-Pad and virtual joystick |
 | `step-2-sensors` | LiDAR overlay and camera feed |
-| `step-3-control` | Full piloting: camera + LiDAR radar + joystick + telemetry HUD |
+| `step-3-control` | Full piloting: camera + LiDAR radar + joystick + telemetry HUD + live SLAM map |
 
 ## Troubleshooting
 

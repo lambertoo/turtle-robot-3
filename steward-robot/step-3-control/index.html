@@ -1381,9 +1381,13 @@
   var MAP_RESOLUTION = 0.025;
   var MAP_GRID_SIZE = 400;
   var MAP_METERS = MAP_GRID_SIZE * MAP_RESOLUTION;
-  var mapGrid = new Uint8Array(MAP_GRID_SIZE * MAP_GRID_SIZE);
-  var mapOccupiedCount = 0;
-  var mapFreeCount = 0;
+  var mapGrid = new Int8Array(MAP_GRID_SIZE * MAP_GRID_SIZE);
+  var LOG_ODDS_HIT = 8;
+  var LOG_ODDS_MISS = -3;
+  var LOG_ODDS_MAX = 50;
+  var LOG_ODDS_MIN = -20;
+  var LOG_ODDS_OCCUPIED_THRESHOLD = 15;
+  var LOG_ODDS_FREE_THRESHOLD = -5;
 
   var mapRobotX = 0, mapRobotY = 0, mapRobotYaw = 0;
   var mapTrail = [];
@@ -1449,10 +1453,7 @@
 
       if (hitGrid.gx >= 0 && hitGrid.gx < MAP_GRID_SIZE && hitGrid.gy >= 0 && hitGrid.gy < MAP_GRID_SIZE) {
         var idx = mapGridIndex(hitGrid.gx, hitGrid.gy);
-        if (mapGrid[idx] !== 2) {
-          mapGrid[idx] = 2;
-          mapOccupiedCount++;
-        }
+        mapGrid[idx] = Math.min(LOG_ODDS_MAX, mapGrid[idx] + LOG_ODDS_HIT);
       }
 
       mapBresenham(robotGrid.gx, robotGrid.gy, hitGrid.gx, hitGrid.gy);
@@ -1473,7 +1474,14 @@
       });
     }
 
-    document.getElementById("mapCells").textContent = (mapOccupiedCount + mapFreeCount) + " cellules";
+    if (mapScanCount % 10 === 0) {
+      var occupiedCellCount = 0;
+      var totalGrid = MAP_GRID_SIZE * MAP_GRID_SIZE;
+      for (var ci = 0; ci < totalGrid; ci++) {
+        if (mapGrid[ci] >= LOG_ODDS_OCCUPIED_THRESHOLD) occupiedCellCount++;
+      }
+      document.getElementById("mapCells").textContent = occupiedCellCount + " murs";
+    }
   }
 
   function mapBresenham(x0, y0, x1, y1) {
@@ -1489,10 +1497,7 @@
     while (steps < maxSteps) {
       if (x0 >= 0 && x0 < MAP_GRID_SIZE && y0 >= 0 && y0 < MAP_GRID_SIZE) {
         var idx = mapGridIndex(x0, y0);
-        if (mapGrid[idx] === 0) {
-          mapGrid[idx] = 1;
-          mapFreeCount++;
-        }
+        mapGrid[idx] = Math.max(LOG_ODDS_MIN, mapGrid[idx] + LOG_ODDS_MISS);
       }
       if (x0 === x1 && y0 === y1) break;
       var e2 = 2 * err;
@@ -1521,10 +1526,14 @@
         if (val === 0) continue;
 
         var pos = mapGridToCanvas(gx, gy);
-        if (val === 1) {
+        if (val >= LOG_ODDS_OCCUPIED_THRESHOLD) {
+          var occupiedIntensity = Math.min(1, val / LOG_ODDS_MAX);
+          var brightness = Math.floor(180 + 70 * occupiedIntensity);
+          mapCtx.fillStyle = "rgb(" + brightness + "," + brightness + "," + (brightness + 10) + ")";
+        } else if (val <= LOG_ODDS_FREE_THRESHOLD) {
           mapCtx.fillStyle = "#1e1e2a";
         } else {
-          mapCtx.fillStyle = "#e8e8f0";
+          mapCtx.fillStyle = "#151520";
         }
         mapCtx.fillRect(pos.cx, pos.cy, cellSize, cellSize);
       }
@@ -1625,12 +1634,10 @@
 
   function mapClear() {
     mapGrid.fill(0);
-    mapOccupiedCount = 0;
-    mapFreeCount = 0;
     mapTrail = [];
     mapScanCount = 0;
     mapRenderFull();
-    document.getElementById("mapCells").textContent = "0 cellules";
+    document.getElementById("mapCells").textContent = "0 murs";
   }
 
   mapWrap.addEventListener("mousedown", function(e) {

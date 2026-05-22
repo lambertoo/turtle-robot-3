@@ -1254,7 +1254,7 @@
     var velMsg = {
       header: { stamp: { sec: 0, nanosec: 0 }, frame_id: "base_link" },
       twist: {
-        linear: { x: lin, y: 0, z: 0 },
+        linear: { x: -lin, y: 0, z: 0 },
         angular: { x: 0, y: 0, z: ang },
       }
     };
@@ -1459,13 +1459,14 @@
   var mapRenderPending = false;
 
   var mapCanvas = document.getElementById("mapCanvas");
-  var mapCtx = mapCanvas.getContext("2d");
   var mapWrap = document.getElementById("mapWrap");
 
   function mapResizeCanvas() {
     var rect = mapWrap.getBoundingClientRect();
-    mapCanvas.width = rect.width;
-    mapCanvas.height = rect.height;
+    if (rect.width > 0 && rect.height > 0) {
+      mapCanvas.width = rect.width;
+      mapCanvas.height = rect.height;
+    }
   }
 
   window.addEventListener("resize", function() {
@@ -1499,9 +1500,9 @@
     var ryaw = mapRobotYaw;
     var robotGrid = mapWorldToGrid(rx, ry);
 
-    for (var i = 0; i < n; i += 2) {
+    for (var i = 0; i < n; i++) {
       var r = ranges[i];
-      if (!isFinite(r) || isNaN(r) || r < 0.08 || r > 3.5) continue;
+      if (!isFinite(r) || isNaN(r) || r < 0.08 || r > 12.0) continue;
 
       var angle = scanMsg.angle_min + i * scanMsg.angle_increment + ryaw;
       var wx = rx + r * Math.cos(angle);
@@ -1518,7 +1519,7 @@
 
     mapScanCount++;
 
-    if (mapScanCount % 2 === 0) {
+    if (mapScanCount % 3 === 0) {
       mapTrail.push({ x: rx, y: ry });
       if (mapTrail.length > mapTrailMax) mapTrail.shift();
     }
@@ -1567,7 +1568,9 @@
   function mapRenderFull() {
     var w = mapCanvas.width;
     var h = mapCanvas.height;
-    mapCtx.fillStyle = "#0d0d0f";
+    if (w < 10 || h < 10) return;
+    var mapCtx = mapCanvas.getContext("2d");
+    mapCtx.fillStyle = "#080810";
     mapCtx.fillRect(0, 0, w, h);
 
     var startGX = Math.max(0, Math.floor((-mapViewOffsetX - w / 2) / mapZoom + MAP_GRID_SIZE / 2));

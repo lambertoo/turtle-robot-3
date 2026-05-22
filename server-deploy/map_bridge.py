@@ -9,7 +9,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 from nav_msgs.msg import OccupancyGrid
 
-PI_ROSBRIDGE_URL = "ws://turtlebot3.local:9090"
+PI_ROSBRIDGE_URL = "ws://192.168.1.199:9090"
 RECONNECT_DELAY = 5
 
 

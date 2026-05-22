@@ -260,6 +260,78 @@
     }
     .lidar-warn-banner.visible { display: flex; }
 
+    .telem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .telem-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .telem-card.full { grid-column: 1 / -1; }
+
+    .telem-title {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text2); margin-bottom: 8px;
+    }
+
+    .lidar-dist-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
+    }
+    .lidar-cell {
+      background: var(--surface2);
+      border-radius: 8px; padding: 8px 4px;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .lidar-cell.warn { border-color: var(--yellow); background: rgba(245,158,11,0.08); }
+    .lidar-cell.danger { border-color: var(--red); background: rgba(239,68,68,0.12); }
+    .lidar-cell-label { font-size: 9px; color: var(--text2); margin-bottom: 3px; }
+    .lidar-cell-val { font-size: 18px; font-weight: 800; }
+    .lidar-cell-val.safe { color: var(--green); }
+    .lidar-cell-val.warn { color: var(--yellow); }
+    .lidar-cell-val.danger { color: var(--red); }
+    .lidar-cell-unit { font-size: 9px; color: var(--text2); margin-top: 1px; }
+
+    .imu-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
+    }
+    .imu-cell {
+      background: var(--surface2);
+      border-radius: 8px; padding: 8px 4px;
+      text-align: center;
+    }
+    .imu-cell-label { font-size: 9px; color: var(--text2); margin-bottom: 3px; }
+    .imu-cell-val { font-size: 16px; font-weight: 700; }
+
+    .batt-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .batt-info { flex: 1; }
+    .batt-stats {
+      display: flex; gap: 12px; margin-bottom: 6px;
+    }
+    .batt-stat-label { font-size: 9px; color: var(--text2); }
+    .batt-stat-val { font-size: 18px; font-weight: 800; }
+    .batt-stat-val.green { color: var(--green); }
+    .batt-stat-val.yellow { color: var(--yellow); }
+    .batt-stat-val.red { color: var(--red); }
+    .batt-bar-track {
+      height: 6px; background: var(--border);
+      border-radius: 3px; overflow: hidden;
+    }
+    .batt-bar-fill {
+      height: 100%; border-radius: 3px;
+      background: var(--green); transition: width 0.5s;
+    }
+
     @media (orientation: landscape) {
       .main { flex-direction: row; }
       .video-section { width: 55%; height: 100%; aspect-ratio: unset; }
@@ -347,6 +419,66 @@
 
     <div class="lidar-warn-banner" id="collisionBanner">
       ⚠ Obstacle proche !
+    </div>
+
+    <div class="telem-grid">
+      <div class="telem-card full">
+        <div class="telem-title">LiDAR — Distances</div>
+        <div class="lidar-dist-row">
+          <div class="lidar-cell" id="lidarCellLeft">
+            <div class="lidar-cell-label">⬅ Gauche</div>
+            <div class="lidar-cell-val safe" id="lidarLeft">—</div>
+            <div class="lidar-cell-unit">m</div>
+          </div>
+          <div class="lidar-cell" id="lidarCellFront">
+            <div class="lidar-cell-label">⬆ Avant</div>
+            <div class="lidar-cell-val safe" id="lidarFront">—</div>
+            <div class="lidar-cell-unit">m</div>
+          </div>
+          <div class="lidar-cell" id="lidarCellRight">
+            <div class="lidar-cell-label">➡ Droite</div>
+            <div class="lidar-cell-val safe" id="lidarRight">—</div>
+            <div class="lidar-cell-unit">m</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="telem-card">
+        <div class="telem-title">IMU</div>
+        <div class="imu-row">
+          <div class="imu-cell">
+            <div class="imu-cell-label">Roll</div>
+            <div class="imu-cell-val" id="imuRoll">—°</div>
+          </div>
+          <div class="imu-cell">
+            <div class="imu-cell-label">Pitch</div>
+            <div class="imu-cell-val" id="imuPitch">—°</div>
+          </div>
+          <div class="imu-cell">
+            <div class="imu-cell-label">Yaw</div>
+            <div class="imu-cell-val" id="imuYaw">—°</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="telem-card">
+        <div class="telem-title">Batterie</div>
+        <div class="batt-info">
+          <div class="batt-stats">
+            <div>
+              <div class="batt-stat-label">Tension</div>
+              <div class="batt-stat-val" id="battVoltage">—V</div>
+            </div>
+            <div>
+              <div class="batt-stat-label">Niveau</div>
+              <div class="batt-stat-val green" id="battPct">—%</div>
+            </div>
+          </div>
+          <div class="batt-bar-track">
+            <div class="batt-bar-fill" id="battBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="speed-bar">
@@ -474,12 +606,32 @@
   function subscribeBattery() {
     bridge.subscribe("/battery_state", "sensor_msgs/msg/BatteryState", function(msg) {
       var voltage = msg.voltage ? msg.voltage.toFixed(1) : "—";
-      var el = document.getElementById("hudBatt");
-      el.textContent = voltage + "V";
       var v = parseFloat(voltage);
-      if (isNaN(v)) return;
-      var pct = Math.max(0, Math.min(100, Math.round((v - 9.6) / (12.6 - 9.6) * 100)));
-      el.className = "hud-val " + (pct > 50 ? "green" : pct > 20 ? "yellow" : "red");
+
+      var hudEl = document.getElementById("hudBatt");
+      hudEl.textContent = voltage + "V";
+
+      document.getElementById("battVoltage").textContent = voltage + "V";
+
+      var pct = null;
+      if (msg.percentage != null && !isNaN(msg.percentage)) {
+        pct = Math.round(msg.percentage * 100);
+      } else if (!isNaN(v)) {
+        pct = Math.max(0, Math.min(100, Math.round((v - 9.6) / (12.6 - 9.6) * 100)));
+      }
+
+      if (pct !== null) {
+        var colorClass = pct > 50 ? "green" : pct > 20 ? "yellow" : "red";
+        hudEl.className = "hud-val " + colorClass;
+
+        var pctEl = document.getElementById("battPct");
+        pctEl.textContent = pct + "%";
+        pctEl.className = "batt-stat-val " + colorClass;
+
+        var barEl = document.getElementById("battBar");
+        barEl.style.width = pct + "%";
+        barEl.style.background = pct > 50 ? "var(--green)" : pct > 20 ? "var(--yellow)" : "var(--red)";
+      }
     }, 2000);
   }
 
@@ -488,9 +640,18 @@
     bridge.subscribe("/imu", "sensor_msgs/msg/Imu", function(msg) {
       var q = msg.orientation;
       if (!q) return;
-      var yaw = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
-      var yawDeg = (yaw * 180 / Math.PI).toFixed(0);
+      var roll  = Math.atan2(2 * (q.w * q.x + q.y * q.z), 1 - 2 * (q.x * q.x + q.y * q.y));
+      var pitch = Math.asin(Math.max(-1, Math.min(1, 2 * (q.w * q.y - q.z * q.x))));
+      var yaw   = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+
+      var rollDeg  = (roll  * 180 / Math.PI).toFixed(1);
+      var pitchDeg = (pitch * 180 / Math.PI).toFixed(1);
+      var yawDeg   = (yaw   * 180 / Math.PI).toFixed(0);
+
       document.getElementById("hudYaw").textContent = yawDeg + "°";
+      document.getElementById("imuRoll").textContent  = rollDeg + "°";
+      document.getElementById("imuPitch").textContent = pitchDeg + "°";
+      document.getElementById("imuYaw").textContent   = yawDeg + "°";
     }, 300);
   }
 
@@ -520,7 +681,11 @@
       if (n === 0) return;
 
       var sector = Math.floor(n / 12);
+      var quarter = Math.floor(n / 4);
+
       var front = minValidRange(ranges, 0, sector, n - sector, n);
+      var left  = minValidSingle(ranges, sector, quarter);
+      var right = minValidSingle(ranges, n - quarter, n - sector);
       frontDistance = front;
 
       var hudFront = document.getElementById("hudFront");
@@ -528,8 +693,13 @@
       hudFront.textContent = frontText + "m";
       hudFront.className = "hud-val " + (front < DANGER_DIST ? "red" : front < WARN_DIST ? "yellow" : "");
 
+      updateLidarCell("Front", front, "lidarCellFront");
+      updateLidarCell("Left",  left,  "lidarCellLeft");
+      updateLidarCell("Right", right, "lidarCellRight");
+
       var banner = document.getElementById("collisionBanner");
-      if (front < DANGER_DIST) {
+      var minAll = Math.min(front, left, right);
+      if (minAll < DANGER_DIST) {
         banner.className = "lidar-warn-banner visible";
       } else {
         banner.className = "lidar-warn-banner";
@@ -558,6 +728,33 @@
       if (isFinite(v) && v > 0.05 && v < min) min = v;
     }
     return min;
+  }
+
+  function minValidSingle(ranges, start, end) {
+    var min = 99;
+    for (var i = start; i < end; i++) {
+      var v = ranges[i];
+      if (isFinite(v) && v > 0.05 && v < min) min = v;
+    }
+    return min;
+  }
+
+  function updateLidarCell(direction, distance, cellId) {
+    var valEl = document.getElementById("lidar" + direction);
+    var cellEl = document.getElementById(cellId);
+    var text = distance > 10 ? "∞" : distance.toFixed(2);
+    valEl.textContent = text;
+
+    cellEl.className = "lidar-cell";
+    if (distance < DANGER_DIST) {
+      valEl.className = "lidar-cell-val danger";
+      cellEl.classList.add("danger");
+    } else if (distance < WARN_DIST) {
+      valEl.className = "lidar-cell-val warn";
+      cellEl.classList.add("warn");
+    } else {
+      valEl.className = "lidar-cell-val safe";
+    }
   }
 
   // --- Mini Radar

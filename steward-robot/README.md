@@ -24,10 +24,143 @@ python3 -m http.server 8888
 
 Puis ouvrir `http://YOUR_PC_IP:8888/step-0-connect/` sur le smartphone.
 
-## Prérequis robot
+## Quick Start from Zero
 
-- rosbridge lancé sur le robot : port 9090
-- Même réseau WiFi que le smartphone
+### What you need
+
+| Component | Purpose |
+|-----------|---------|
+| TurtleBot3 Waffle Pi | The robot (Pi 4 + OpenCR + LDS-03 LiDAR) |
+| Laptop or PC | Serves the dashboard pages and optionally runs SLAM compute |
+| Smartphone or browser | Opens the debug interface |
+| WiFi network | All devices on the same network |
+
+### 1. Set up the Raspberry Pi
+
+Install ROS 2 Jazzy, TurtleBot3 packages, rosbridge, and camera pipeline on the Pi. Full instructions in the [main README](../README.md#fresh-raspberry-pi-setup).
+
+Minimum packages for the steward-robot interface:
+
+```bash
+sudo apt install -y \
+  ros-jazzy-turtlebot3-bringup \
+  ros-jazzy-rosbridge-server
+```
+
+### 2. Launch rosbridge on the Pi
+
+```bash
+source /opt/ros/jazzy/setup.bash
+export TURTLEBOT3_MODEL=waffle_pi
+export LDS_MODEL=LDS-03
+
+ros2 launch turtlebot3_bringup robot.launch.py &
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml &
+```
+
+Or if you've deployed the systemd service (see [main README](../README.md#4-create-systemd-service)):
+
+```bash
+sudo systemctl start turtlebot3
+```
+
+This starts rosbridge on port **9090** along with all robot nodes.
+
+### 3. (Optional) Start the camera
+
+For step-2 and step-3 camera feed:
+
+```bash
+mkdir -p /tmp/camera
+gst-launch-1.0 libcamerasrc ! video/x-raw,width=640,height=480,framerate=15/1 \
+  ! videoconvert ! jpegenc quality=70 \
+  ! multifilesink location=/tmp/camera/snap.jpg max-files=1 &
+
+mjpg_streamer -i "input_file.so -f /tmp/camera -n snap.jpg -d 0.1" \
+  -o "output_http.so -w /usr/local/share/mjpg-streamer/www -p 8080" &
+```
+
+### 4. (Optional) Start scan relay
+
+The LiDAR radar and SLAM map subscribe to `/scan_reliable` (RELIABLE QoS). The raw `/scan` topic uses BEST_EFFORT QoS which rosbridge can't bridge reliably. Run the scan relay on the Pi:
+
+```bash
+ros2 run scan_relay scan_relay_node
+```
+
+Or use the `scan_relay.py` script from `pi-deploy/`:
+
+```bash
+python3 /usr/local/bin/scan_relay.py
+```
+
+### 5. Serve the dashboard
+
+On your laptop (same WiFi network as the robot):
+
+```bash
+cd steward-robot
+python3 -m http.server 8888
+```
+
+### 6. Open in browser
+
+On your phone or PC browser:
+
+```
+http://<LAPTOP_IP>:8888/step-0-connect/
+```
+
+Replace `<LAPTOP_IP>` with your laptop's IP on the WiFi network (e.g. `192.168.1.143`).
+
+### 7. Connect to the robot
+
+On the Step 0 page, enter the rosbridge URL:
+
+```
+ws://<ROBOT_IP>:9090
+```
+
+The robot IP is the Pi's IP on the WiFi network (e.g. `192.168.1.199`). If mDNS works on your network, use `ws://turtlebot3.local:9090`.
+
+The connection URL is saved in your browser — you only need to enter it once.
+
+### What works at each step
+
+| Step | Minimum robot services needed |
+|------|-------------------------------|
+| step-0-connect | rosbridge only |
+| step-1-motors | rosbridge + turtlebot3_bringup (for `/cmd_vel`) |
+| step-2-sensors | rosbridge + turtlebot3_bringup + scan_relay + camera (mjpg_streamer) |
+| step-3-control | rosbridge + turtlebot3_bringup + scan_relay + camera (all features) |
+
+### Network ports
+
+| Port | Host | Service |
+|------|------|---------|
+| 9090 | Robot (Pi) | Rosbridge WebSocket |
+| 8080 | Robot (Pi) | MJPEG camera stream |
+| 8888 | Laptop | Steward-robot HTTP server |
+
+### Troubleshooting
+
+**Can't connect to rosbridge?**
+Check the Pi is reachable: `ping <ROBOT_IP>`. Verify rosbridge is running: `ros2 node list` should show `/rosbridge_websocket`. Check firewall isn't blocking port 9090.
+
+**No LiDAR data on radar/map?**
+The interface subscribes to `/scan_reliable`, not `/scan`. Make sure the scan relay is running. Check with: `ros2 topic list | grep scan_reliable`.
+
+**Camera feed blank?**
+Verify mjpg_streamer is running on the Pi: `curl http://<ROBOT_IP>:8080/?action=snapshot` should return a JPEG image. Check that `/tmp/camera/snap.jpg` exists and is being updated.
+
+**Map not rendering on PC/landscape?**
+Force a browser refresh (Ctrl+Shift+R). The map uses CSS Grid in landscape mode — older browsers may not support it. Chrome 80+ and Safari 14+ work.
+
+**Map shows ghost walls that don't clear?**
+This is normal during fast rotations — the log-odds algorithm needs a few scans to erase stale marks. Drive slowly and the map self-corrects. Use the "Effacer" button to clear and rebuild.
+
+**Battery shows 0% or wrong value?**
+The OpenCR reports battery on a 0-100 scale. If you see 12.6 or similar, the topic might be reporting voltage instead of percentage. Check: `ros2 topic echo /battery_state --once`.
 
 ## Step-by-Step Guide
 

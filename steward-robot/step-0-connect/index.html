@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Steward Robot — Connexion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #18181c;
+      --surface2: #23232a;
+      --border: #2e2e38;
+      --text: #f0f0f5;
+      --text2: #8888a0;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --radius: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header .logo {
+      width: 32px; height: 32px;
+      background: var(--blue);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    header h1 { font-size: 17px; font-weight: 700; }
+    header p { font-size: 12px; color: var(--text2); margin-top: 1px; }
+
+    .content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .input-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    input[type="text"], input[type="number"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text);
+      font-size: 15px;
+      width: 100%;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    .port-group { width: 90px; flex-shrink: 0; }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 20px;
+      border: none;
+      border-radius: 11px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:active { opacity: 0.75; transform: scale(0.97); }
+    .btn-blue { background: var(--blue); color: #fff; width: 100%; margin-top: 12px; }
+    .btn-red { background: var(--red); color: #fff; width: 100%; margin-top: 12px; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text2);
+      width: 100%;
+      margin-top: 8px;
+      font-size: 13px;
+      padding: 10px;
+    }
+
+    /* Status dot */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: var(--surface2);
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--text2);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.error { background: var(--red); }
+    .dot.connecting { background: var(--yellow); animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-text { font-size: 14px; }
+    .status-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    /* Metrics grid */
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .metric {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .metric-unit {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 3px;
+    }
+
+    .metric-value.green { color: var(--green); }
+    .metric-value.yellow { color: var(--yellow); }
+    .metric-value.red { color: var(--red); }
+
+    /* Battery bar */
+    .battery-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .battery-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--green);
+      transition: width 0.5s;
+    }
+
+    /* Topics list */
+    .topics-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .topic-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--surface2);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .topic-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .topic-name { color: var(--text); font-family: monospace; flex: 1; }
+    .topic-check { color: var(--green); font-size: 14px; }
+    .topic-missing { color: var(--text2); font-size: 14px; }
+
+    /* Nav to next step */
+    .next-btn {
+      background: linear-gradient(135deg, var(--blue), #6366f1);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      width: 100%;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s;
+    }
+
+    .next-btn:disabled { opacity: 0.4; pointer-events: none; }
+    .next-btn:active { opacity: 0.8; }
+
+    .hidden { display: none !important; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Event log panel */
+    .log-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      scroll-behavior: smooth;
+    }
+    .log-entry { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .log-time { color: var(--text2); margin-right: 6px; }
+    .log-ok { color: var(--green); }
+    .log-warn { color: var(--yellow); }
+    .log-err { color: var(--red); }
+    .log-info { color: var(--blue); }
+    .log-dim { color: var(--text2); }
+
+    .reconnect-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 10px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--yellow);
+    }
+    .reconnect-bar .spinner {
+      width: 12px; height: 12px;
+      border: 2px solid rgba(245,158,11,0.3);
+      border-top-color: var(--yellow);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🤖</div>
+  <div>
+    <h1>Steward Robot</h1>
+    <p>Étape 0 — Connexion &amp; État</p>
+  </div>
+</header>
+
+<div class="content">
+
+  <!-- CONNECTION CARD -->
+  <div class="card">
+    <div class="card-title">Connexion Rosbridge</div>
+
+    <div class="status-row">
+      <div class="dot" id="dot"></div>
+      <div>
+        <div class="status-text" id="statusText">Non connecté</div>
+        <div class="status-sub" id="statusSub">Entrez l'adresse du robot</div>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Adresse IP du robot</label>
+        <input type="text" id="ipInput" placeholder="192.168.1.X ou turtlebot3.local" />
+      </div>
+      <div class="input-group port-group">
+        <label>Port</label>
+        <input type="number" id="portInput" value="9090" />
+      </div>
+    </div>
+
+    <button class="btn btn-blue" id="connectBtn" onclick="handleConnect()">
+      <span id="connectBtnText">Se connecter</span>
+    </button>
+    <button class="btn btn-outline hidden" id="disconnectBtn" onclick="handleDisconnect()">
+      Déconnecter
+    </button>
+
+    <!-- Error help block -->
+    <div id="errorHelp" style="display:none;margin-top:14px;background:#1a0f0f;border:1px solid #7f1d1d;border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#f87171;margin-bottom:10px;">⚠️ Impossible de joindre <code id="errorIp" style="background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:4px;"></code></div>
+      <div style="font-size:12px;color:#fca5a5;line-height:1.8;">
+        Vérifie dans l'ordre :<br>
+        <span style="color:#f87171;">1.</span> Le robot est allumé et le boot est terminé (~60s)<br>
+        <span style="color:#f87171;">2.</span> Le smartphone est sur le <strong>même réseau WiFi</strong> que le robot<br>
+        <span style="color:#f87171;">3.</span> Utilise l'<strong>adresse IP directe</strong> (ex: 192.168.1.42) et non <em>turtlebot3.local</em><br>
+        <span style="color:#f87171;">4.</span> Sur le Pi : <code style="background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:4px;">systemctl status turtlebot3.service</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROBOT STATUS CARD (hidden until connected) -->
+  <div class="card hidden" id="statusCard">
+    <div class="card-title">État du robot</div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Batterie</div>
+        <div class="metric-value" id="battVoltage">—</div>
+        <div class="metric-unit">Volts</div>
+        <div class="battery-bar"><div class="battery-fill" id="battBar" style="width:0%"></div></div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Pourcentage</div>
+        <div class="metric-value" id="battPct">—</div>
+        <div class="metric-unit">%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">IMU Roll</div>
+        <div class="metric-value" id="imuRoll">—</div>
+        <div class="metric-unit">degrés</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">IMU Pitch</div>
+        <div class="metric-value" id="imuPitch">—</div>
+        <div class="metric-unit">degrés</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOPICS CARD (hidden until connected) -->
+  <div class="card hidden" id="topicsCard">
+    <div class="card-title">Topics ROS actifs</div>
+    <div class="topics-list" id="topicsList">
+      <div style="color:var(--text2); font-size:13px">Chargement...</div>
+    </div>
+    <button class="btn btn-outline" onclick="checkTopics()" style="margin-top:12px">
+      🔄 Rafraîchir
+    </button>
+  </div>
+
+  <!-- EVENT LOG CARD -->
+  <div class="card">
+    <div class="card-title">Journal d'événements</div>
+    <div class="log-panel" id="logPanel"></div>
+    <div id="reconnectBar" class="reconnect-bar hidden">
+      <span class="spinner"></span>
+      <span id="reconnectText">Reconnexion dans 3s...</span>
+    </div>
+  </div>
+
+  <!-- NEXT STEP BUTTON -->
+  <a class="next-btn" id="nextBtn" href="../step-1-motors/" style="pointer-events:none;opacity:0.4">
+    Étape 1 — Contrôle moteurs →
+  </a>
+
+</div>
+
+<script src="../lib/rosbridge.js"></script>
+<script>
+  const bridge = new RosBridge();
+  let battSub = null;
+  let imuSub = null;
+  let connected = false;
+  let autoReconnect = true;
+  let reconnectTimer = null;
+  let reconnectDelay = 3000;
+  let reconnectAttempts = 0;
+  let battMsgCount = 0;
+  let imuMsgCount = 0;
+
+  const CRITICAL_TOPICS = [
+    "/scan_reliable",
+    "/cmd_vel",
+    "/odom",
+    "/imu",
+    "/battery_state",
+  ];
+
+  // --- Event Logger ---
+  function log(msg, level = "info") {
+    const panel = document.getElementById("logPanel");
+    const now = new Date();
+    const ts = now.toLocaleTimeString("fr-FR", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const entry = document.createElement("div");
+    entry.className = "log-entry";
+    entry.innerHTML = `<span class="log-time">${ts}</span><span class="log-${level}">${msg}</span>`;
+    panel.appendChild(entry);
+    // Keep max 80 entries
+    while (panel.children.length > 80) panel.removeChild(panel.firstChild);
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  // --- Restore last IP from localStorage
+  window.addEventListener("load", () => {
+    const saved = localStorage.getItem("steward_robot_ip");
+    if (saved) document.getElementById("ipInput").value = saved;
+    log("Interface prête — entrez l'IP du robot", "dim");
+  });
+
+  function setStatus(state, text, sub) {
+    const dot = document.getElementById("dot");
+    dot.className = "dot " + state;
+    document.getElementById("statusText").textContent = text;
+    document.getElementById("statusSub").textContent = sub;
+  }
+
+  function handleConnect() {
+    const ip = document.getElementById("ipInput").value.trim();
+    const port = document.getElementById("portInput").value.trim() || "9090";
+    if (!ip) { setStatus("error", "Erreur", "Entrez une adresse IP"); log("Adresse IP vide", "err"); return; }
+
+    localStorage.setItem("steward_robot_ip", ip);
+    autoReconnect = true;
+    reconnectAttempts = 0;
+    document.getElementById("errorHelp").style.display = "none";
+
+    doConnect(ip, port);
+  }
+
+  let _errorHandled = false;
+
+  function doConnect(ip, port) {
+    const url = `ws://${ip}:${port}`;
+    setStatus("connecting", "Connexion...", url);
+    log(`Tentative de connexion → ${url}`, "info");
+    _errorHandled = false;
+
+    const btn = document.getElementById("connectBtn");
+    document.getElementById("connectBtnText").innerHTML = '<span class="spinner"></span>';
+    btn.disabled = true;
+
+    bridge.onConnect = onConnected;
+    bridge.onDisconnect = () => {
+      if (!_errorHandled) onLostConnection();
+    };
+    bridge.onError = (e) => {
+      _errorHandled = true;
+      onConnectionError(e);
+    };
+
+    bridge.connect(url);
+  }
+
+  function onConnected() {
+    connected = true;
+    reconnectAttempts = 0;
+    reconnectDelay = 3000;
+    hideReconnectBar();
+
+    const ip = document.getElementById("ipInput").value.trim();
+    const port = document.getElementById("portInput").value.trim() || "9090";
+    setStatus("connected", "Connecté ✓", `ws://${ip}:${port}`);
+    log(`✓ Connecté à ws://${ip}:${port}`, "ok");
+
+    document.getElementById("connectBtn").classList.add("hidden");
+    document.getElementById("disconnectBtn").classList.remove("hidden");
+    document.getElementById("statusCard").classList.remove("hidden");
+    document.getElementById("topicsCard").classList.remove("hidden");
+    document.getElementById("errorHelp").style.display = "none";
+
+    const nextBtn = document.getElementById("nextBtn");
+    nextBtn.style.pointerEvents = "";
+    nextBtn.style.opacity = "";
+
+    // Switch to disconnect handler (not connect-failed handler)
+    bridge.onDisconnect = onLostConnection;
+
+    subscribeBattery();
+    subscribeIMU();
+    checkTopics();
+
+    // Periodic topic refresh
+    if (!window._topicInterval) {
+      window._topicInterval = setInterval(() => { if (connected) checkTopics(); }, 15000);
+    }
+  }
+
+  function onConnectionError(e) {
+    if (connected) {
+      // Was connected, now error → treat as disconnect
+      onLostConnection();
+      return;
+    }
+    const ip = document.getElementById("ipInput").value.trim();
+    const reason = (e && e.message) ? e.message : (e && e.type) ? e.type : "timeout ou port fermé";
+    log(`✗ Échec connexion: ${reason}`, "err");
+    setStatus("error", "Connexion impossible", "Rosbridge pas encore prêt ou réseau");
+    document.getElementById("connectBtn").disabled = false;
+    document.getElementById("connectBtnText").textContent = "Réessayer";
+
+    if (reconnectAttempts === 0) {
+      document.getElementById("errorHelp").style.display = "block";
+      document.getElementById("errorIp").textContent = ip;
+    }
+
+    scheduleReconnect();
+  }
+
+  function onLostConnection() {
+    const wasConnected = connected;
+    connected = false;
+    battSub = null; imuSub = null;
+
+    if (wasConnected) {
+      log("⚡ Connexion perdue", "warn");
+      setStatus("error", "Déconnecté", "Connexion perdue");
+      document.getElementById("connectBtn").classList.remove("hidden");
+      document.getElementById("connectBtn").disabled = false;
+      document.getElementById("connectBtnText").textContent = "Reconnecter";
+      document.getElementById("disconnectBtn").classList.add("hidden");
+    } else {
+      log("✗ Connexion échouée (close)", "err");
+      document.getElementById("connectBtn").disabled = false;
+      document.getElementById("connectBtnText").textContent = "Réessayer";
+    }
+
+    scheduleReconnect();
+  }
+
+  function scheduleReconnect() {
+    if (!autoReconnect) return;
+    if (reconnectTimer) return; // already scheduled
+
+    reconnectAttempts++;
+    // Exponential backoff: 3s, 5s, 8s, 12s, max 15s
+    reconnectDelay = Math.min(15000, 3000 + reconnectAttempts * 2000);
+    const secs = Math.round(reconnectDelay / 1000);
+
+    log(`↻ Reconnexion auto dans ${secs}s (tentative ${reconnectAttempts})`, "warn");
+    showReconnectBar(secs);
+
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      hideReconnectBar();
+      if (!connected && autoReconnect) {
+        const ip = document.getElementById("ipInput").value.trim();
+        const port = document.getElementById("portInput").value.trim() || "9090";
+        if (ip) doConnect(ip, port);
+      }
+    }, reconnectDelay);
+  }
+
+  function showReconnectBar(secs) {
+    const bar = document.getElementById("reconnectBar");
+    bar.classList.remove("hidden");
+    document.getElementById("reconnectText").textContent = `Reconnexion dans ${secs}s... (tentative ${reconnectAttempts})`;
+  }
+
+  function hideReconnectBar() {
+    document.getElementById("reconnectBar").classList.add("hidden");
+  }
+
+  function handleDisconnect() {
+    autoReconnect = false;
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    hideReconnectBar();
+    bridge.disconnect();
+    connected = false;
+    battSub = null; imuSub = null;
+    setStatus("", "Non connecté", "Déconnexion manuelle");
+    log("Déconnecté manuellement", "dim");
+    document.getElementById("connectBtn").classList.remove("hidden");
+    document.getElementById("connectBtn").disabled = false;
+    document.getElementById("connectBtnText").textContent = "Se connecter";
+    document.getElementById("disconnectBtn").classList.add("hidden");
+    document.getElementById("statusCard").classList.add("hidden");
+    document.getElementById("topicsCard").classList.add("hidden");
+    document.getElementById("errorHelp").style.display = "none";
+    document.getElementById("nextBtn").style.opacity = "0.4";
+    document.getElementById("nextBtn").style.pointerEvents = "none";
+  }
+
+  function subscribeBattery() {
+    battMsgCount = 0;
+    battSub = bridge.subscribe("/battery_state", "sensor_msgs/msg/BatteryState", (msg) => {
+      battMsgCount++;
+      if (battMsgCount === 1) log("📡 Réception données batterie", "ok");
+
+      const voltage = msg.voltage ? msg.voltage.toFixed(2) : "—";
+      const pct = msg.percentage != null ? Math.round(msg.percentage * 100) : null;
+
+      document.getElementById("battVoltage").textContent = voltage !== "—" ? voltage : "—";
+
+      const pctEl = document.getElementById("battPct");
+      const barEl = document.getElementById("battBar");
+      const voltEl = document.getElementById("battVoltage");
+
+      if (pct !== null && !isNaN(pct)) {
+        pctEl.textContent = pct;
+        barEl.style.width = pct + "%";
+        const cls = pct > 50 ? "green" : pct > 20 ? "yellow" : "red";
+        pctEl.className = "metric-value " + cls;
+        barEl.style.background = pct > 50 ? "var(--green)" : pct > 20 ? "var(--yellow)" : "var(--red)";
+      } else {
+        const v = parseFloat(voltage);
+        const estimated = isNaN(v) ? null : Math.max(0, Math.min(100, Math.round((v - 9.6) / (12.6 - 9.6) * 100)));
+        if (estimated !== null) {
+          pctEl.textContent = estimated;
+          barEl.style.width = estimated + "%";
+          const cls = estimated > 50 ? "green" : estimated > 20 ? "yellow" : "red";
+          pctEl.className = "metric-value " + cls;
+          barEl.style.background = estimated > 50 ? "var(--green)" : estimated > 20 ? "var(--yellow)" : "var(--red)";
+        }
+      }
+      voltEl.className = "metric-value";
+    }, 1000);
+    log("Abonnement /battery_state...", "dim");
+  }
+
+  function subscribeIMU() {
+    imuMsgCount = 0;
+    imuSub = bridge.subscribe("/imu", "sensor_msgs/msg/Imu", (msg) => {
+      imuMsgCount++;
+      if (imuMsgCount === 1) log("📡 Réception données IMU", "ok");
+
+      const q = msg.orientation;
+      if (!q) return;
+      const roll = Math.atan2(2*(q.w*q.x + q.y*q.z), 1 - 2*(q.x*q.x + q.y*q.y));
+      const pitch = Math.asin(Math.max(-1, Math.min(1, 2*(q.w*q.y - q.z*q.x))));
+      document.getElementById("imuRoll").textContent = (roll * 180 / Math.PI).toFixed(1);
+      document.getElementById("imuPitch").textContent = (pitch * 180 / Math.PI).toFixed(1);
+    }, 500);
+    log("Abonnement /imu...", "dim");
+  }
+
+  function checkTopics() {
+    const list = document.getElementById("topicsList");
+    if (!connected) return;
+
+    bridge.getTopics((result) => {
+      const available = result.topics || [];
+      list.innerHTML = "";
+
+      let foundCount = 0;
+      CRITICAL_TOPICS.forEach((t) => {
+        const found = available.includes(t);
+        if (found) foundCount++;
+        const item = document.createElement("div");
+        item.className = "topic-item";
+        item.innerHTML = `
+          <span class="topic-dot" style="background:${found ? "var(--green)" : "var(--text2)"}"></span>
+          <span class="topic-name">${t}</span>
+          <span class="${found ? "topic-check" : "topic-missing"}">${found ? "✓" : "—"}</span>
+        `;
+        list.appendChild(item);
+      });
+
+      const extra = available.filter(t => !CRITICAL_TOPICS.includes(t)).length;
+      if (extra > 0) {
+        const more = document.createElement("div");
+        more.style.cssText = "font-size:12px;color:var(--text2);padding:6px 10px;";
+        more.textContent = `+ ${extra} autre(s) topics actifs`;
+        list.appendChild(more);
+      }
+
+      log(`Topics: ${foundCount}/${CRITICAL_TOPICS.length} critiques actifs (${available.length} total)`, foundCount === CRITICAL_TOPICS.length ? "ok" : "warn");
+    });
+  }
+</script>
+
+</body>
+</html>

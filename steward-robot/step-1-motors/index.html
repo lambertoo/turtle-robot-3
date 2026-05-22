@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Steward Robot — Étape 1 : Moteurs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #18181c;
+      --surface2: #23232a;
+      --border: #2e2e38;
+      --text: #f0f0f5;
+      --text2: #8888a0;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --radius: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 14px 20px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .back-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text2);
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .back-btn:active { opacity: 0.7; }
+
+    header h1 { font-size: 16px; font-weight: 700; }
+    header p { font-size: 11px; color: var(--text2); margin-top: 1px; }
+
+    /* Connection status pill */
+    .conn-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text2); }
+    .dot.connected { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .dot.error { background: var(--red); }
+
+    /* Main layout */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 14px;
+      overflow-y: auto;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Speed slider card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .card-title {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text2); margin-bottom: 14px;
+    }
+
+    .speed-row {
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--blue);
+      cursor: pointer;
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.2);
+    }
+
+    .speed-val {
+      font-size: 18px; font-weight: 700; color: var(--blue);
+      min-width: 50px; text-align: right;
+    }
+
+    /* Velocity readout */
+    .vel-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-top: 4px;
+    }
+    .vel-box {
+      background: var(--surface2);
+      border-radius: 10px; padding: 10px 14px;
+    }
+    .vel-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+    .vel-value { font-size: 20px; font-weight: 700; }
+
+    /* JOYSTICK 8 directions */
+    .joystick-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0;
+      gap: 10px;
+    }
+
+    #joystickCanvas {
+      touch-action: none;
+      cursor: grab;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .dir-label {
+      font-size: 13px;
+      color: var(--text2);
+      letter-spacing: 0.04em;
+      min-height: 20px;
+      text-align: center;
+    }
+
+    /* STOP button */
+    .stop-btn {
+      width: 100%;
+      padding: 20px;
+      background: var(--red);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.1s, transform 0.1s;
+    }
+    .stop-btn:active { opacity: 0.8; transform: scale(0.98); }
+
+    /* Status log */
+    .log {
+      font-size: 12px; color: var(--text2);
+      font-family: monospace;
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    /* Nav */
+    .nav-row {
+      display: flex; gap: 10px;
+    }
+    .nav-btn {
+      flex: 1; padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text2);
+      font-size: 14px; font-weight: 600;
+      text-align: center; text-decoration: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn.next {
+      background: var(--blue); border-color: var(--blue); color: #fff;
+    }
+    .nav-btn:active { opacity: 0.75; }
+
+    .not-connected-overlay {
+      position: fixed; inset: 0;
+      background: rgba(13,13,15,0.92);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; z-index: 100;
+      padding: 24px;
+      text-align: center;
+    }
+    .not-connected-overlay .icon { font-size: 48px; }
+    .not-connected-overlay p { color: var(--text2); font-size: 14px; line-height: 1.5; }
+    .not-connected-overlay a {
+      background: var(--blue); color: #fff;
+      border-radius: 12px; padding: 14px 28px;
+      text-decoration: none; font-weight: 700; font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Not connected overlay -->
+<div class="not-connected-overlay" id="overlay">
+  <div class="icon">🔌</div>
+  <h2>Non connecté</h2>
+  <p>Retourne à l'étape 0 pour te connecter au robot.</p>
+  <a href="../step-0-connect/">← Étape 0 : Connexion</a>
+</div>
+
+<header>
+  <div class="header-left">
+    <a class="back-btn" href="../step-0-connect/">← Retour</a>
+    <div>
+      <h1>Étape 1 — Moteurs</h1>
+      <p>D-Pad de contrôle</p>
+    </div>
+  </div>
+  <div class="conn-pill">
+    <div class="dot" id="dot"></div>
+    <span id="connLabel">—</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Speed control -->
+  <div class="card">
+    <div class="card-title">Vitesse maximale</div>
+    <div class="speed-row">
+      <span style="font-size:13px;color:var(--text2)">Lente</span>
+      <input type="range" id="speedSlider" min="0.05" max="0.3" step="0.01" value="0.15"
+             oninput="onSpeedChange(this.value)" />
+      <span style="font-size:13px;color:var(--text2)">Rapide</span>
+      <div class="speed-val" id="speedVal">0.15 m/s</div>
+    </div>
+  </div>
+
+  <!-- Velocity readout -->
+  <div class="vel-row">
+    <div class="vel-box">
+      <div class="vel-label">Linéaire</div>
+      <div class="vel-value" id="velLin">0.00 m/s</div>
+    </div>
+    <div class="vel-box">
+      <div class="vel-label">Angulaire</div>
+      <div class="vel-value" id="velAng">0.00 rad/s</div>
+    </div>
+  </div>
+
+  <!-- JOYSTICK 8 DIRECTIONS -->
+  <div class="card">
+    <div class="card-title">Joystick 8 directions</div>
+    <div class="joystick-container">
+      <canvas id="joystickCanvas" width="260" height="260"></canvas>
+      <div class="dir-label" id="dirLabel">— Neutre —</div>
+    </div>
+  </div>
+
+  <!-- STOP -->
+  <button class="stop-btn" onclick="emergencyStop()">⛔ STOP</button>
+
+  <!-- Log -->
+  <div class="log" id="log">En attente de commandes...</div>
+
+  <!-- Navigation -->
+  <div class="nav-row">
+    <a class="nav-btn" href="../step-0-connect/">← Étape 0</a>
+    <a class="nav-btn next" href="../step-2-sensors/">Étape 2 — Capteurs →</a>
+  </div>
+
+</div>
+
+<script src="../lib/rosbridge.js"></script>
+<script>
+  const bridge = new RosBridge();
+  let maxLinear = 0.15;
+  let maxAngular = 0.8;
+  let currentLinear = 0;
+  let currentAngular = 0;
+  let publishInterval = null;
+  let logLines = [];
+
+  // Joystick state
+  const CANVAS_SIZE = 260;
+  const CENTER = CANVAS_SIZE / 2;
+  const OUTER_R = CENTER - 10;
+  const KNOB_R = 28;
+  const DEAD_ZONE = 0.12;        // fraction of OUTER_R
+  const SECTOR_SNAP = 22.5;      // degrees half-width per sector
+
+  let joystickActive = false;
+  let knobX = CENTER;
+  let knobY = CENTER;
+
+  const DIR_LABELS = [
+    "⬆ Avant",         // N
+    "↗ Avant-Droite",  // NE
+    "➡ Droite",        // E
+    "↘ Arrière-Droite",// SE
+    "⬇ Arrière",       // S
+    "↙ Arrière-Gauche",// SW
+    "⬅ Gauche",        // W
+    "↖ Avant-Gauche",  // NW
+  ];
+
+  // --- Boot
+  window.addEventListener("load", () => {
+    drawJoystick(CENTER, CENTER, false);
+    const ip = localStorage.getItem("steward_robot_ip");
+    if (!ip) return;
+    setConnLabel("Connexion...");
+    bridge.onConnect = onConnected;
+    bridge.onDisconnect = onDisconnected;
+    bridge.onError = () => onDisconnected();
+    bridge.connect(`ws://${ip}:9090`);
+  });
+
+  function onConnected() {
+    document.getElementById("overlay").style.display = "none";
+    document.getElementById("dot").className = "dot connected";
+    const ip = localStorage.getItem("steward_robot_ip") || "robot";
+    setConnLabel(ip);
+    addLog("Connecté à " + ip);
+    startPublishLoop();
+  }
+
+  function onDisconnected() {
+    document.getElementById("dot").className = "dot error";
+    setConnLabel("Déconnecté");
+    stopPublishLoop();
+    addLog("Connexion perdue");
+  }
+
+  function setConnLabel(txt) {
+    document.getElementById("connLabel").textContent = txt;
+  }
+
+  function onSpeedChange(val) {
+    maxLinear = parseFloat(val);
+    document.getElementById("speedVal").textContent = maxLinear.toFixed(2) + " m/s";
+  }
+
+  // =====================
+  //   JOYSTICK CANVAS
+  // =====================
+  const canvas = document.getElementById("joystickCanvas");
+  const ctx = canvas.getContext("2d");
+
+  function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return {
+      x: (src.clientX - rect.left) * (CANVAS_SIZE / rect.width),
+      y: (src.clientY - rect.top)  * (CANVAS_SIZE / rect.height),
+    };
+  }
+
+  function clampKnob(x, y) {
+    const dx = x - CENTER;
+    const dy = y - CENTER;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist > OUTER_R) {
+      return { x: CENTER + dx/dist * OUTER_R, y: CENTER + dy/dist * OUTER_R };
+    }
+    return { x, y };
+  }
+
+  function drawJoystick(kx, ky, active) {
+    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+    // --- Sector lines (8 directions)
+    const sectorColors = [
+      "rgba(59,130,246,0.08)", "rgba(59,130,246,0.04)"
+    ];
+    for (let i = 0; i < 8; i++) {
+      const startAngle = (i * 45 - 22.5) * Math.PI / 180 - Math.PI/2;
+      const endAngle   = startAngle + 45 * Math.PI / 180;
+      ctx.beginPath();
+      ctx.moveTo(CENTER, CENTER);
+      ctx.arc(CENTER, CENTER, OUTER_R, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = i % 2 === 0 ? "rgba(59,130,246,0.06)" : "rgba(255,255,255,0.02)";
+      ctx.fill();
+    }
+
+    // --- Outer ring
+    ctx.beginPath();
+    ctx.arc(CENTER, CENTER, OUTER_R, 0, Math.PI*2);
+    ctx.strokeStyle = active ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // --- Inner dead zone circle
+    ctx.beginPath();
+    ctx.arc(CENTER, CENTER, OUTER_R * DEAD_ZONE, 0, Math.PI*2);
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // --- Direction tick marks + arrows
+    const dirArrows = ["↑","↗","→","↘","↓","↙","←","↖"];
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * 45 - 90) * Math.PI / 180;
+      const tx = CENTER + Math.cos(angle) * (OUTER_R - 22);
+      const ty = CENTER + Math.sin(angle) * (OUTER_R - 22);
+      ctx.font = "bold 16px sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(dirArrows[i], tx, ty);
+    }
+
+    // --- Line from center to knob
+    if (active) {
+      ctx.beginPath();
+      ctx.moveTo(CENTER, CENTER);
+      ctx.lineTo(kx, ky);
+      ctx.strokeStyle = "rgba(59,130,246,0.4)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // --- Knob shadow
+    ctx.beginPath();
+    ctx.arc(kx, ky, KNOB_R + 4, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fill();
+
+    // --- Knob
+    const grad = ctx.createRadialGradient(kx-4, ky-4, 2, kx, ky, KNOB_R);
+    grad.addColorStop(0, active ? "#60a5fa" : "#4b5563");
+    grad.addColorStop(1, active ? "#1d4ed8" : "#1f2937");
+    ctx.beginPath();
+    ctx.arc(kx, ky, KNOB_R, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = active ? "rgba(147,197,253,0.6)" : "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function computeVelocity(kx, ky) {
+    const dx = kx - CENTER;
+    const dy = ky - CENTER;  // y down = backward
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const norm = dist / OUTER_R;
+
+    if (norm < DEAD_ZONE) {
+      return { lin: 0, ang: 0, sector: -1 };
+    }
+
+    // Angle: 0=up(forward), clockwise positive
+    let angle = Math.atan2(dx, -dy);  // N=0, E=PI/2, S=PI, W=-PI/2
+    let deg = angle * 180 / Math.PI;
+    if (deg < 0) deg += 360;
+
+    // Snap to 8 sectors
+    const sector = Math.round(deg / 45) % 8;
+
+    // Map sector to (linear, angular)
+    // Sectors: 0=N(fwd), 1=NE(fwd+right), 2=E(right), 3=SE(back+right)
+    //          4=S(back), 5=SW(back+left), 6=W(left), 7=NW(fwd+left)
+    const DIAG = 0.707;
+    const sectorMap = [
+      [ 1,  0   ],  // 0 N  — forward
+      [ DIAG, -DIAG ],  // 1 NE
+      [ 0, -1   ],  // 2 E  — turn right
+      [-DIAG, -DIAG ],  // 3 SE
+      [-1,  0   ],  // 4 S  — backward
+      [-DIAG,  DIAG ],  // 5 SW
+      [ 0,  1   ],  // 6 W  — turn left
+      [ DIAG,  DIAG ],  // 7 NW
+    ];
+
+    const [linFactor, angFactor] = sectorMap[sector];
+    return {
+      lin: linFactor * maxLinear * Math.min(norm, 1.0),
+      ang: angFactor * maxAngular * Math.min(norm, 1.0),
+      sector,
+    };
+  }
+
+  function onJoystickMove(kx, ky) {
+    const clamped = clampKnob(kx, ky);
+    knobX = clamped.x;
+    knobY = clamped.y;
+    drawJoystick(knobX, knobY, true);
+
+    const { lin, ang, sector } = computeVelocity(knobX, knobY);
+    currentLinear = lin;
+    currentAngular = ang;
+    updateVelDisplay();
+
+    const label = sector >= 0 ? DIR_LABELS[sector] : "— Neutre —";
+    document.getElementById("dirLabel").textContent = label;
+  }
+
+  function onJoystickRelease() {
+    joystickActive = false;
+    knobX = CENTER; knobY = CENTER;
+    currentLinear = 0; currentAngular = 0;
+    drawJoystick(CENTER, CENTER, false);
+    updateVelDisplay();
+    publishVelocity(0, 0);
+    document.getElementById("dirLabel").textContent = "— Neutre —";
+  }
+
+  // Touch events
+  canvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    joystickActive = true;
+    const pos = getCanvasPos(e);
+    onJoystickMove(pos.x, pos.y);
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    if (!joystickActive) return;
+    const pos = getCanvasPos(e);
+    onJoystickMove(pos.x, pos.y);
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    onJoystickRelease();
+  }, { passive: false });
+
+  // Mouse events (desktop testing)
+  canvas.addEventListener("mousedown", (e) => {
+    joystickActive = true;
+    const pos = getCanvasPos(e);
+    onJoystickMove(pos.x, pos.y);
+  });
+  canvas.addEventListener("mousemove", (e) => {
+    if (!joystickActive) return;
+    const pos = getCanvasPos(e);
+    onJoystickMove(pos.x, pos.y);
+  });
+  canvas.addEventListener("mouseup", () => onJoystickRelease());
+  canvas.addEventListener("mouseleave", () => { if (joystickActive) onJoystickRelease(); });
+
+  function emergencyStop() {
+    onJoystickRelease();
+    addLog("⛔ STOP");
+  }
+
+  // --- Publish loop (100ms)
+  function startPublishLoop() {
+    if (publishInterval) return;
+    publishInterval = setInterval(() => {
+      publishVelocity(currentLinear, currentAngular);
+    }, 100);
+  }
+
+  function stopPublishLoop() {
+    if (publishInterval) { clearInterval(publishInterval); publishInterval = null; }
+  }
+
+  function publishVelocity(lin, ang) {
+    bridge.publish("/cmd_vel", "geometry_msgs/msg/TwistStamped", {
+      header: { stamp: { sec: 0, nanosec: 0 }, frame_id: "base_link" },
+      twist: {
+        linear:  { x: -lin, y: 0, z: 0 },
+        angular: { x: 0, y: 0, z: -ang },
+      }
+    });
+  }
+
+  function updateVelDisplay() {
+    document.getElementById("velLin").textContent = currentLinear.toFixed(2) + " m/s";
+    document.getElementById("velAng").textContent = currentAngular.toFixed(2) + " rad/s";
+  }
+
+  // --- Log
+  function addLog(msg) {
+    const now = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    logLines.push(`[${now}] ${msg}`);
+    if (logLines.length > 8) logLines.shift();
+    const el = document.getElementById("log");
+    el.textContent = logLines.join("\n");
+    el.scrollTop = el.scrollHeight;
+  }
+</script>
+
+</body>
+</html>

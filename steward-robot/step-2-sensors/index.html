@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Steward Robot — Étape 2 : Capteurs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #18181c;
+      --surface2: #23232a;
+      --border: #2e2e38;
+      --text: #f0f0f5;
+      --text2: #8888a0;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --radius: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 14px 20px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .back-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text2);
+      padding: 6px 12px; font-size: 13px;
+      cursor: pointer; text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .back-btn:active { opacity: 0.7; }
+    header h1 { font-size: 16px; font-weight: 700; }
+    header p { font-size: 11px; color: var(--text2); margin-top: 1px; }
+    .conn-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px; font-size: 12px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text2); }
+    .dot.connected { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .dot.error { background: var(--red); }
+
+    .main {
+      flex: 1; display: flex; flex-direction: column;
+      padding: 14px; gap: 12px; overflow-y: auto;
+      max-width: 520px; width: 100%; margin: 0 auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .card-title {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text2); margin-bottom: 12px;
+    }
+
+    /* Camera feed */
+    .camera-wrap {
+      position: relative;
+      width: 100%;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+    }
+    .camera-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .camera-placeholder {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; color: var(--text2); font-size: 13px;
+    }
+    .camera-placeholder .icon { font-size: 36px; }
+
+    .cam-overlay {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 8px; padding: 4px 10px;
+      font-size: 11px; color: var(--text2);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .cam-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+    .cam-dot.live { background: var(--red); animation: blink 1s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* LiDAR display */
+    .lidar-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .lidar-box {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 12px 10px;
+      text-align: center;
+      border: 2px solid var(--border);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .lidar-box.warn { border-color: var(--yellow); background: rgba(245,158,11,0.08); }
+    .lidar-box.danger { border-color: var(--red); background: rgba(239,68,68,0.12); }
+
+    .lidar-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; }
+    .lidar-value { font-size: 24px; font-weight: 800; }
+    .lidar-unit { font-size: 11px; color: var(--text2); margin-top: 2px; }
+    .lidar-value.safe { color: var(--green); }
+    .lidar-value.warn { color: var(--yellow); }
+    .lidar-value.danger { color: var(--red); }
+
+    /* LiDAR radar canvas */
+    .radar-wrap {
+      display: flex; justify-content: center;
+      padding: 8px 0 4px;
+    }
+    canvas#radar {
+      border-radius: 50%;
+      background: var(--surface2);
+    }
+
+    /* IMU card */
+    .imu-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+    }
+    .imu-box {
+      background: var(--surface2); border-radius: 10px;
+      padding: 10px; text-align: center;
+    }
+    .imu-label { font-size: 10px; color: var(--text2); margin-bottom: 4px; }
+    .imu-value { font-size: 18px; font-weight: 700; }
+
+    /* Nav */
+    .nav-row { display: flex; gap: 10px; }
+    .nav-btn {
+      flex: 1; padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text2);
+      font-size: 14px; font-weight: 600;
+      text-align: center; text-decoration: none;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn.next {
+      background: linear-gradient(135deg, var(--blue), #6366f1);
+      border-color: transparent; color: #fff;
+    }
+    .nav-btn:active { opacity: 0.75; }
+
+    .not-connected-overlay {
+      position: fixed; inset: 0;
+      background: rgba(13,13,15,0.92);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; z-index: 100; padding: 24px; text-align: center;
+    }
+    .not-connected-overlay .icon { font-size: 48px; }
+    .not-connected-overlay p { color: var(--text2); font-size: 14px; line-height: 1.5; }
+    .not-connected-overlay a {
+      background: var(--blue); color: #fff;
+      border-radius: 12px; padding: 14px 28px;
+      text-decoration: none; font-weight: 700; font-size: 15px;
+    }
+
+    /* Camera port input */
+    .cam-row {
+      display: flex; gap: 10px; align-items: center; margin-bottom: 12px;
+    }
+    .cam-row input {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px;
+      color: var(--text); font-size: 14px; width: 120px; outline: none;
+    }
+    .cam-row input:focus { border-color: var(--blue); }
+    .cam-row button {
+      background: var(--blue); border: none; border-radius: 8px;
+      color: #fff; padding: 8px 16px; font-size: 13px; font-weight: 600;
+      cursor: pointer;
+    }
+    .cam-row button:active { opacity: 0.8; }
+  </style>
+</head>
+<body>
+
+<div class="not-connected-overlay" id="overlay">
+  <div class="icon">🔌</div>
+  <h2>Non connecté</h2>
+  <p>Retourne à l'étape 0 pour te connecter au robot.</p>
+  <a href="../step-0-connect/">← Étape 0 : Connexion</a>
+</div>
+
+<header>
+  <div class="header-left">
+    <a class="back-btn" href="../step-1-motors/">← Retour</a>
+    <div>
+      <h1>Étape 2 — Capteurs</h1>
+      <p>Caméra + LiDAR + IMU</p>
+    </div>
+  </div>
+  <div class="conn-pill">
+    <div class="dot" id="dot"></div>
+    <span id="connLabel">—</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- CAMERA -->
+  <div class="card">
+    <div class="card-title">Flux Caméra (MJPEG)</div>
+    <div class="cam-row">
+      <input type="text" id="camPort" placeholder="Port (ex: 8080)" value="8080" />
+      <button onclick="loadCamera()">Charger</button>
+    </div>
+    <div class="camera-wrap" id="cameraWrap">
+      <div class="camera-placeholder" id="cameraPlaceholder">
+        <div class="icon">📷</div>
+        <p>Appuie sur "Charger" pour<br>démarrer le flux caméra</p>
+      </div>
+      <img id="cameraImg" src="" alt="Camera feed" style="display:none"
+           onload="onCameraLoad()" onerror="onCameraError()" />
+      <div class="cam-overlay" id="camOverlay" style="display:none">
+        <div class="cam-dot live" id="camDot"></div>
+        <span id="camStatus">LIVE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIDAR -->
+  <div class="card">
+    <div class="card-title">LiDAR — Distances (m)</div>
+    <div class="lidar-grid">
+      <div class="lidar-box" id="box-left">
+        <div class="lidar-label">⬅ Gauche</div>
+        <div class="lidar-value safe" id="lidar-left">—</div>
+        <div class="lidar-unit">m</div>
+      </div>
+      <div class="lidar-box" id="box-front">
+        <div class="lidar-label">⬆ Avant</div>
+        <div class="lidar-value safe" id="lidar-front">—</div>
+        <div class="lidar-unit">m</div>
+      </div>
+      <div class="lidar-box" id="box-right">
+        <div class="lidar-label">➡ Droite</div>
+        <div class="lidar-value safe" id="lidar-right">—</div>
+        <div class="lidar-unit">m</div>
+      </div>
+    </div>
+
+    <!-- Mini radar canvas -->
+    <div class="radar-wrap">
+      <canvas id="radar" width="200" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- IMU -->
+  <div class="card">
+    <div class="card-title">IMU</div>
+    <div class="imu-grid">
+      <div class="imu-box">
+        <div class="imu-label">Roll (°)</div>
+        <div class="imu-value" id="imuRoll">—</div>
+      </div>
+      <div class="imu-box">
+        <div class="imu-label">Pitch (°)</div>
+        <div class="imu-value" id="imuPitch">—</div>
+      </div>
+      <div class="imu-box">
+        <div class="imu-label">Yaw (°)</div>
+        <div class="imu-value" id="imuYaw">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav-row">
+    <a class="nav-btn" href="../step-1-motors/">← Étape 1</a>
+    <a class="nav-btn next" href="#">Étape 3 — Pilotage complet →</a>
+  </div>
+
+</div>
+
+<script src="../lib/rosbridge.js"></script>
+<script>
+  const bridge = new RosBridge();
+  const WARN_DIST = 0.6;
+  const DANGER_DIST = 0.35;
+  let radarPoints = [];
+  let robotIp = "";
+
+  window.addEventListener("load", () => {
+    robotIp = localStorage.getItem("steward_robot_ip") || "";
+    if (!robotIp) return;
+
+    bridge.onConnect = onConnected;
+    bridge.onDisconnect = onDisconnected;
+    bridge.onError = () => onDisconnected();
+    bridge.connect(`ws://${robotIp}:9090`);
+  });
+
+  function onConnected() {
+    document.getElementById("overlay").style.display = "none";
+    document.getElementById("dot").className = "dot connected";
+    document.getElementById("connLabel").textContent = robotIp;
+    subscribeLidar();
+    subscribeIMU();
+  }
+
+  function onDisconnected() {
+    document.getElementById("dot").className = "dot error";
+    document.getElementById("connLabel").textContent = "Déconnecté";
+  }
+
+  // --- Camera
+  function loadCamera() {
+    const port = document.getElementById("camPort").value.trim() || "8080";
+    if (!robotIp) return;
+    const url = `http://${robotIp}:${port}/?action=stream`;
+    const img = document.getElementById("cameraImg");
+    img.src = url;
+    img.style.display = "block";
+    document.getElementById("cameraPlaceholder").style.display = "none";
+  }
+
+  function onCameraLoad() {
+    document.getElementById("camOverlay").style.display = "flex";
+    document.getElementById("camStatus").textContent = "LIVE";
+    document.getElementById("camDot").className = "cam-dot live";
+  }
+
+  function onCameraError() {
+    document.getElementById("camStatus").textContent = "Erreur";
+    document.getElementById("camDot").className = "cam-dot";
+    document.getElementById("camDot").style.background = "var(--red)";
+  }
+
+  // --- LiDAR
+  function subscribeLidar() {
+    bridge.subscribe("/scan_reliable", "sensor_msgs/msg/LaserScan", (msg) => {
+      const ranges = msg.ranges;
+      const n = ranges.length;
+      if (n === 0) return;
+
+      const sector = Math.floor(n / 12);
+      const quarter = Math.floor(n / 4);
+
+      const front = minValid(ranges, [...range(0, sector), ...range(n - sector, n)]);
+      const left  = minValid(ranges, range(sector, quarter));
+      const right = minValid(ranges, range(n - quarter, n - sector));
+
+      updateLidar("front", front, "box-front");
+      updateLidar("left",  left,  "box-left");
+      updateLidar("right", right, "box-right");
+
+      // Radar update (subsample)
+      radarPoints = [];
+      const step = Math.max(1, Math.floor(n / 180));
+      for (let i = 0; i < n; i += step) {
+        const r = ranges[i];
+        if (!isFinite(r) || isNaN(r) || r < 0.05 || r > 4.0) continue;
+        const angle = msg.angle_min + i * msg.angle_increment;
+        radarPoints.push({ r, angle });
+      }
+      drawRadar();
+    }, 200);
+  }
+
+  function minValid(ranges, indices) {
+    const valid = indices
+      .map(i => ranges[i])
+      .filter(v => isFinite(v) && !isNaN(v) && v > 0.05);
+    return valid.length ? Math.min(...valid) : 99;
+  }
+
+  function range(start, end) {
+    const out = [];
+    for (let i = start; i < end; i++) out.push(i);
+    return out;
+  }
+
+  function updateLidar(id, dist, boxId) {
+    const el = document.getElementById("lidar-" + id);
+    const box = document.getElementById(boxId);
+    const val = dist > 10 ? "∞" : dist.toFixed(2);
+    el.textContent = val;
+
+    let cls = "safe";
+    box.className = "lidar-box";
+    if (dist < DANGER_DIST) { cls = "danger"; box.classList.add("danger"); }
+    else if (dist < WARN_DIST) { cls = "warn"; box.classList.add("warn"); }
+    el.className = "lidar-value " + cls;
+  }
+
+  // --- Radar canvas
+  function drawRadar() {
+    const canvas = document.getElementById("radar");
+    const ctx = canvas.getContext("2d");
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const maxR = cx - 10;
+    const maxDist = 3.0;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Grid circles
+    [1, 2, 3].forEach(r => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, (r / maxDist) * maxR, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,0.07)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = "rgba(136,136,160,0.5)";
+      ctx.font = "9px sans-serif";
+      ctx.fillText(r + "m", cx + (r / maxDist) * maxR + 3, cy - 3);
+    });
+
+    // Cross lines
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy); ctx.stroke();
+
+    // Points
+    radarPoints.forEach(({ r, angle }) => {
+      const dist = Math.min(r, maxDist);
+      const px = cx + Math.cos(angle - Math.PI / 2) * (dist / maxDist) * maxR;
+      const py = cy + Math.sin(angle - Math.PI / 2) * (dist / maxDist) * maxR;
+
+      const hue = dist < DANGER_DIST ? 0 : dist < WARN_DIST ? 40 : 140;
+      ctx.beginPath();
+      ctx.arc(px, py, 2, 0, Math.PI * 2);
+      ctx.fillStyle = `hsl(${hue},80%,60%)`;
+      ctx.fill();
+    });
+
+    // Robot center
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "var(--blue)";
+    ctx.fill();
+
+    // Direction indicator
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy - 20);
+    ctx.strokeStyle = "var(--blue)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // --- IMU
+  function subscribeIMU() {
+    bridge.subscribe("/imu", "sensor_msgs/msg/Imu", (msg) => {
+      const q = msg.orientation;
+      const roll  = Math.atan2(2*(q.w*q.x + q.y*q.z), 1 - 2*(q.x*q.x + q.y*q.y));
+      const pitch = Math.asin(Math.max(-1, Math.min(1, 2*(q.w*q.y - q.z*q.x))));
+      const yaw   = Math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z));
+
+      document.getElementById("imuRoll").textContent  = (roll  * 180 / Math.PI).toFixed(1) + "°";
+      document.getElementById("imuPitch").textContent = (pitch * 180 / Math.PI).toFixed(1) + "°";
+      document.getElementById("imuYaw").textContent   = (yaw   * 180 / Math.PI).toFixed(1) + "°";
+    }, 250);
+  }
+
+  // Initial empty radar
+  drawRadar();
+</script>
+
+</body>
+</html>

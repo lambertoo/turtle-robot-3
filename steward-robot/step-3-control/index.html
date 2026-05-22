@@ -475,10 +475,10 @@
 
     @media (orientation: landscape) {
       .main { flex-direction: row; }
-      .left-col { width: 55%; height: 100%; }
-      .right-col { width: 45%; height: 100%; }
-      .video-section { aspect-ratio: unset; flex-shrink: 0; height: 50%; }
-      .map-section { min-height: 0; }
+      .left-col { width: 55%; height: 100%; overflow: hidden; }
+      .right-col { width: 45%; height: 100%; overflow-y: auto; }
+      .video-section { aspect-ratio: unset; flex: 0 0 45%; max-height: 45%; overflow: hidden; }
+      .map-section { flex: 1 1 55%; min-height: 0; }
       .controls-section { padding: 8px 10px; gap: 8px; }
       .joystick-row { min-height: 160px; }
     }
@@ -855,6 +855,8 @@
   // --- Odometry
   function subscribeOdom() {
     bridge.subscribe("/odom", "nav_msgs/msg/Odometry", function(msg) {
+      if (typeof mapUpdateOdom === "function") mapUpdateOdom(msg);
+
       var pos = msg.pose.pose.position;
       document.getElementById("odomX").textContent = pos.x.toFixed(2);
       document.getElementById("odomY").textContent = pos.y.toFixed(2);
@@ -867,12 +869,14 @@
       var ly = msg.twist.twist.linear.y;
       var speed = Math.sqrt(lx * lx + ly * ly);
       document.getElementById("odomSpd").textContent = speed.toFixed(2);
-    }, 200);
+    }, 100);
   }
 
   // --- LiDAR
   function subscribeLidar() {
     bridge.subscribe("/scan_reliable", "sensor_msgs/msg/LaserScan", function(msg) {
+      if (typeof mapProcessScan === "function") mapProcessScan(msg);
+
       var ranges = msg.ranges;
       var n = ranges.length;
       if (n === 0) return;
@@ -1387,7 +1391,7 @@
   var mapTrailMax = 2000;
 
   var mapViewOffsetX = 0, mapViewOffsetY = 0;
-  var mapZoom = 1.0;
+  var mapZoom = 2.0;
   var mapDragging = false;
   var mapDragStartX = 0, mapDragStartY = 0;
   var mapDragOffsetX = 0, mapDragOffsetY = 0;
@@ -1397,11 +1401,6 @@
   var mapCanvas = document.getElementById("mapCanvas");
   var mapCtx = mapCanvas.getContext("2d");
   var mapWrap = document.getElementById("mapWrap");
-
-  function mapInit() {
-    mapResizeCanvas();
-    mapRenderFull();
-  }
 
   function mapResizeCanvas() {
     var rect = mapWrap.getBoundingClientRect();
@@ -1524,9 +1523,9 @@
 
         var pos = mapGridToCanvas(gx, gy);
         if (val === 1) {
-          mapCtx.fillStyle = "#1a1a22";
+          mapCtx.fillStyle = "#1e1e2a";
         } else {
-          mapCtx.fillStyle = "#d0d0e0";
+          mapCtx.fillStyle = "#e8e8f0";
         }
         mapCtx.fillRect(pos.cx, pos.cy, cellSize, cellSize);
       }
@@ -1568,16 +1567,33 @@
     mapCtx.lineWidth = 2;
     mapCtx.stroke();
 
-    mapCtx.beginPath();
-    mapCtx.strokeStyle = "rgba(255,255,255,0.05)";
+    mapCtx.strokeStyle = "rgba(255,255,255,0.08)";
     mapCtx.lineWidth = 0.5;
     var originGrid = mapWorldToGrid(0, 0);
     var originCanvas = mapGridToCanvas(originGrid.gx, originGrid.gy);
+    mapCtx.setLineDash([4, 4]);
+    mapCtx.beginPath();
     mapCtx.moveTo(originCanvas.cx, 0);
     mapCtx.lineTo(originCanvas.cx, h);
     mapCtx.moveTo(0, originCanvas.cy);
     mapCtx.lineTo(w, originCanvas.cy);
     mapCtx.stroke();
+    mapCtx.setLineDash([]);
+
+    var gridSpacingM = 1.0;
+    var gridSpacingPx = (gridSpacingM / MAP_RESOLUTION) * mapZoom;
+    if (gridSpacingPx > 20) {
+      mapCtx.strokeStyle = "rgba(255,255,255,0.03)";
+      mapCtx.lineWidth = 0.5;
+      for (var gm = -5; gm <= 5; gm++) {
+        var gPos = mapWorldToGrid(gm * gridSpacingM, 0);
+        var gCanv = mapGridToCanvas(gPos.gx, gPos.gy);
+        mapCtx.beginPath(); mapCtx.moveTo(gCanv.cx, 0); mapCtx.lineTo(gCanv.cx, h); mapCtx.stroke();
+        gPos = mapWorldToGrid(0, gm * gridSpacingM);
+        gCanv = mapGridToCanvas(gPos.gx, gPos.gy);
+        mapCtx.beginPath(); mapCtx.moveTo(0, gCanv.cy); mapCtx.lineTo(w, gCanv.cy); mapCtx.stroke();
+      }
+    }
 
     var scaleM = (1 / mapZoom) * MAP_RESOLUTION * 100;
     document.getElementById("mapScaleLabel").textContent = "1px = " + scaleM.toFixed(1) + "cm";
@@ -1681,74 +1697,21 @@
     mapRenderFull();
   }, { passive: false });
 
-  // Hook odom into map
-  var _origSubscribeOdom = subscribeOdom;
-  subscribeOdom = function() {
-    bridge.subscribe("/odom", "nav_msgs/msg/Odometry", function(msg) {
-      mapUpdateOdom(msg);
+  // Init map after layout settles
+  function mapDelayedInit() {
+    mapResizeCanvas();
+    if (mapCanvas.width < 10 || mapCanvas.height < 10) {
+      setTimeout(mapDelayedInit, 300);
+      return;
+    }
+    mapRenderFull();
+  }
+  setTimeout(mapDelayedInit, 200);
 
-      var pos = msg.pose.pose.position;
-      document.getElementById("odomX").textContent = pos.x.toFixed(2);
-      document.getElementById("odomY").textContent = pos.y.toFixed(2);
-
-      var q = msg.pose.pose.orientation;
-      var yaw = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
-      document.getElementById("odomHdg").textContent = (yaw * 180 / Math.PI).toFixed(0) + "°";
-
-      var lx = msg.twist.twist.linear.x;
-      var ly = msg.twist.twist.linear.y;
-      var speed = Math.sqrt(lx * lx + ly * ly);
-      document.getElementById("odomSpd").textContent = speed.toFixed(2);
-    }, 200);
-  };
-
-  // Hook scan into map
-  var _origSubscribeLidar = subscribeLidar;
-  subscribeLidar = function() {
-    bridge.subscribe("/scan_reliable", "sensor_msgs/msg/LaserScan", function(msg) {
-      mapProcessScan(msg);
-
-      var ranges = msg.ranges;
-      var n = ranges.length;
-      if (n === 0) return;
-
-      var sector = Math.floor(n / 12);
-      var quarter = Math.floor(n / 4);
-      var front = minValidRange(ranges, 0, sector, n - sector, n);
-      var left  = minValidSingle(ranges, sector, quarter);
-      var right = minValidSingle(ranges, n - quarter, n - sector);
-      frontDistance = front;
-
-      var hudFront = document.getElementById("hudFront");
-      var frontText = front > 10 ? "∞" : front.toFixed(2);
-      hudFront.textContent = frontText + "m";
-      hudFront.className = "hud-val " + (front < DANGER_DIST ? "red" : front < WARN_DIST ? "yellow" : "");
-
-      updateLidarCell("Front", front, "lidarCellFront");
-      updateLidarCell("Left",  left,  "lidarCellLeft");
-      updateLidarCell("Right", right, "lidarCellRight");
-
-      var banner = document.getElementById("collisionBanner");
-      var minAll = Math.min(front, left, right);
-      if (minAll < DANGER_DIST) {
-        banner.className = "lidar-warn-banner visible";
-      } else {
-        banner.className = "lidar-warn-banner";
-      }
-
-      radarPoints = [];
-      var step = Math.max(1, Math.floor(n / 120));
-      for (var i = 0; i < n; i += step) {
-        var r = ranges[i];
-        if (!isFinite(r) || isNaN(r) || r < 0.05 || r > 4.0) continue;
-        var angle = msg.angle_min + i * msg.angle_increment;
-        radarPoints.push({ r: r, angle: angle });
-      }
-      drawRadar();
-    }, 150);
-  };
-
-  setTimeout(mapInit, 100);
+  new ResizeObserver(function() {
+    mapResizeCanvas();
+    mapRenderFull();
+  }).observe(mapWrap);
 </script>
 
 </body>

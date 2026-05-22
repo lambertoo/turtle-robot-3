@@ -17,24 +17,49 @@ Built with Next.js 16, React 19, Tailwind CSS 4, roslibjs, and next-intl (Englis
 
 ## Architecture
 
+Split architecture: Pi handles hardware I/O, laptop runs compute-heavy SLAM and dashboard in Docker containers.
+
 ```
-┌─────────────────────────┐     WebSocket :9090      ┌──────────────────────┐
-│   Browser (Dashboard)   │◄────────────────────────►│   Raspberry Pi 4     │
-│                         │                           │                      │
-│  Next.js 16 + React 19 │     MJPEG :8080          │  ROS 2 Jazzy         │
-│  Tailwind CSS 4         │◄─────────────────────────│  TurtleBot3 Bringup  │
-│  roslibjs               │                           │  Cartographer SLAM   │
-│  next-intl (en/fr)      │                           │  Nav2 Stack          │
-│                         │                           │  Rosbridge           │
-└─────────────────────────┘                           │  Frontier Explorer   │
-                                                      │  GStreamer Camera    │
-                                                      └──────────┬───────────┘
-                                                                 │ USB
-                                                      ┌──────────┴───────────┐
-                                                      │  OpenCR + LDS-03     │
-                                                      │  Motors / IMU / LiDAR│
-                                                      └──────────────────────┘
+┌──────────────────────────────────────────────────┐
+│  Laptop (Ubuntu) — Docker Engine (native)        │
+│                                                  │
+│  ┌─────────────────────┐  ┌───────────────────┐  │
+│  │ turtlebot3-compute  │  │    dashboard      │  │
+│  │                     │  │                   │  │
+│  │ Cartographer SLAM   │  │ Next.js 16        │  │
+│  │ Nav2 Stack          │  │ React 19          │  │
+│  │ Frontier Explorer   │  │ Tailwind CSS 4    │  │
+│  │ scan_bridge.py      │  │ roslibjs          │  │
+│  │ map_bridge.py       │  │ next-intl (en/fr) │  │
+│  │ FastDDS UDP-only    │  │ Port 3000         │  │
+│  └────────┬────────────┘  └───────────────────┘  │
+│           │ DDS (UDP unicast/multicast)           │
+└───────────┼──────────────────────────────────────┘
+            │ WiFi (same network)
+┌───────────┴──────────────────────────────────────┐
+│  Raspberry Pi 4 — Hardware Layer                 │
+│                                                  │
+│  ROS 2 Jazzy         Rosbridge :9090             │
+│  TurtleBot3 Bringup  GStreamer Camera :8080      │
+│  Scan Relay           OpenCR Watchdog            │
+│  FastDDS UDP-only                                │
+└──────────────────────┬───────────────────────────┘
+                       │ USB
+            ┌──────────┴───────────┐
+            │  OpenCR + LDS-03     │
+            │  Motors / IMU / LiDAR│
+            └──────────────────────┘
 ```
+
+### Why split?
+
+The Pi 4 lacks the CPU/RAM for Cartographer SLAM + Nav2 + camera + rosbridge simultaneously. Offloading SLAM and navigation to the laptop via DDS keeps the Pi stable and responsive.
+
+### Network transport
+
+Both Pi and laptop use FastDDS with UDP-only transport (shared memory disabled). DDS discovery uses multicast; data flows via UDP unicast. The `fastdds_udp_only.xml` profile can optionally include an `interfaceWhiteList` to restrict traffic to the WiFi interface.
+
+**Native Docker Engine required.** Docker Desktop runs a LinuxKit VM — `network_mode: host` maps to the VM, not the real host, breaking DDS unicast. Use `docker context use default` to switch to native Docker Engine.
 
 ## Prerequisites
 
@@ -409,6 +434,33 @@ npm run dev
 
 Open http://localhost:3000.
 
+## Server-Deploy (Laptop Compute)
+
+The `server-deploy/` directory contains everything for the laptop Docker containers.
+
+```bash
+cd server-deploy
+docker compose up --build -d
+```
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | Two containers: `turtlebot3-compute` (SLAM/Nav2) + `dashboard` (Next.js) |
+| `Dockerfile` | Compute container: ROS 2 Jazzy, Cartographer, Nav2, FastDDS |
+| `Dockerfile.dashboard` | Dashboard container: Node.js, Next.js production build |
+| `fastdds_udp_only.xml` | FastDDS profile disabling shared memory, UDP-only transport |
+| `scan_bridge.py` | WebSocket bridge: Pi sensor topics → compute container ROS 2 topics |
+| `map_bridge.py` | WebSocket bridge: compute container `/map` → Pi rosbridge |
+| `frontier_explorer.py` | Frontier-based autonomous explorer using Nav2 NavigateToPose |
+| `turtlebot3-compute-start.sh` | Container entrypoint: launches SLAM, Nav2, bridges |
+
+### Bridge files
+
+When DDS transport between Pi and laptop is unreliable, the bridge files provide a WebSocket fallback:
+
+- **`scan_bridge.py`** — Subscribes to `/scan`, `/odom`, `/imu`, `/tf` on the Pi's rosbridge (ws://192.168.1.199:9090) and republishes them as native ROS 2 topics inside the compute container.
+- **`map_bridge.py`** — Subscribes to `/map` (OccupancyGrid) inside the compute container and publishes it to the Pi's rosbridge for the dashboard.
+
 ## Pi-Side Components
 
 | File | Purpose |
@@ -416,7 +468,7 @@ Open http://localhost:3000.
 | `turtlebot3-start.sh` | Main startup — launches all ROS nodes, camera, and services in sequence |
 | `frontier_explorer.py` | Frontier-based autonomous explorer using Nav2 NavigateToPose |
 | `scan_relay.py` | QoS bridge: `/scan` (BEST_EFFORT) → `/scan_reliable` (RELIABLE) |
-| `opencr-watchdog.sh` | Monitors turtlebot3_ros, triggers full service restart on crash |
+| `opencr-watchdog.sh` | Monitors turtlebot3_ros, logs OpenCR failure without restarting other services |
 | `nav2-exploration.launch.py` | Nav2 launch for exploration (no AMCL — Cartographer handles localization) |
 | `nav2_exploration_params.yaml` | Nav2 parameters tuned for TurtleBot3 Waffle Pi |
 
@@ -477,6 +529,23 @@ Dashboard control: `/autonomous_explorer/start` and `/autonomous_explorer/stop` 
 | 8080 | HTTP | MJPEG camera stream |
 | 3000 | HTTP | Dashboard dev server |
 
+## Steward Robot (Debug Interface)
+
+The `steward-robot/` directory contains standalone HTML pages for step-by-step robot debugging from a smartphone.
+
+```bash
+cd steward-robot
+python3 -m http.server 8888
+```
+
+Open `http://<laptop-ip>:8888/step-0-connect/` on a phone or browser.
+
+| Page | Purpose |
+|------|---------|
+| `step-0-connect` | Connection status, battery, IMU, topic availability |
+| `step-1-motors` | Motor control with D-Pad and virtual joystick |
+| `step-2-sensors` | LiDAR overlay and camera feed |
+
 ## Troubleshooting
 
 **Robot not moving after startup?**
@@ -493,6 +562,37 @@ ROS 2 Jazzy TurtleBot3 uses `geometry_msgs/msg/TwistStamped` (not `Twist`). Refr
 
 **Nav2 failing to start?**
 Nav2 needs the odom→base_footprint transform from turtlebot3_ros. If turtlebot3_ros crashed, Nav2 lifecycle manager will abort. Restart the service.
+
+**OpenCR "Failed connection with Devices"?**
+The OpenCR firmware may be corrupted. Reflash it:
+
+```bash
+cd ~/opencr_update/opencr_update
+./opencr_ld_shell_arm /dev/ttyACM0 115200 waffle.opencr 1
+```
+
+If that fails, verify the USB connection: `dmesg | grep -i "ttyACM\|cdc_acm"` should show the OpenCR at `/dev/ttyACM0`. Try toggling DTR: `stty -F /dev/ttyACM0 hupcl; sleep 1; stty -F /dev/ttyACM0 -hupcl`.
+
+**Pi Camera v2 not detected (`supported=0 detected=0`)?**
+The device tree overlay file may be corrupted (0 bytes). Restore it:
+
+```bash
+sudo cp /lib/firmware/$(uname -r)/device-tree/overlays/imx219.dtbo /boot/firmware/overlays/imx219.dtbo
+sudo reboot
+```
+
+Ensure `/boot/firmware/config.txt` has `camera_auto_detect=0` and `dtoverlay=imx219` in the `[all]` section.
+
+**DDS topics discovered but no data flowing (Docker)?**
+Docker Desktop uses a LinuxKit VM — `network_mode: host` maps to the VM, not the real host. Switch to native Docker Engine:
+
+```bash
+docker context use default
+docker compose up --build -d
+```
+
+**Watchdog keeps restarting everything?**
+The watchdog (`opencr-watchdog.sh`) detects dead turtlebot3_ros and by default restarts the entire service. The current version logs the failure and keeps rosbridge, LiDAR, and camera running. Only a "stale odom" condition (process alive but not publishing) triggers a full restart.
 
 ## Development
 

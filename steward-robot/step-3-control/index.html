@@ -8,24 +8,33 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0d0d0f;
-      --surface: #18181c;
-      --surface2: #23232a;
-      --border: #2e2e38;
-      --text: #f0f0f5;
-      --text2: #8888a0;
+      --bg: #080810;
+      --surface: #111118;
+      --surface2: #1a1a24;
+      --surface3: #22222e;
+      --border: #2a2a38;
+      --border2: #343446;
+      --text: #e8e8f0;
+      --text2: #7070a0;
+      --text3: #4a4a6a;
       --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.12);
       --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.12);
       --yellow: #f59e0b;
+      --yellow-dim: rgba(245,158,11,0.12);
       --blue: #3b82f6;
-      --radius: 14px;
+      --blue-dim: rgba(59,130,246,0.12);
+      --purple: #a78bfa;
+      --radius: 12px;
+      --mono: "SF Mono","Fira Code","Consolas",monospace;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      min-height: 100dvh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -33,207 +42,442 @@
       -webkit-user-select: none;
     }
 
+    /* ═══ HEADER ═══ */
     header {
-      padding: 10px 16px 8px;
+      padding: 8px 14px;
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
       flex-shrink: 0;
+      background: var(--surface);
     }
-    .header-left { display: flex; align-items: center; gap: 8px; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
     .back-btn {
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text2);
-      padding: 5px 10px; font-size: 12px;
+      border-radius: 7px; color: var(--text2);
+      padding: 5px 10px; font-size: 11px; font-weight: 500;
       cursor: pointer; text-decoration: none;
       -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
     }
-    .back-btn:active { opacity: 0.7; }
-    header h1 { font-size: 15px; font-weight: 700; }
+    .back-btn:hover { background: var(--surface3); }
+    header h1 { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
     header p { font-size: 10px; color: var(--text2); margin-top: 1px; }
 
     .conn-pill {
-      display: flex; align-items: center; gap: 5px;
+      display: flex; align-items: center; gap: 6px;
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 20px; padding: 4px 10px; font-size: 11px;
+      border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 500;
     }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text2); }
-    .dot.connected { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text3); flex-shrink: 0;
+    }
+    .dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse-dot 2s ease-in-out infinite; }
     .dot.error { background: var(--red); }
+    @keyframes pulse-dot { 0%,100%{box-shadow:0 0 6px var(--green)} 50%{box-shadow:0 0 12px var(--green)} }
 
+    /* ═══ LAYOUT ═══ */
     .main {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      min-height: 0;
     }
 
+    .left-col, .right-col {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .right-col { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .right-col::-webkit-scrollbar { width: 4px; }
+    .right-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ═══ VIDEO ═══ */
     .video-section {
       position: relative;
       width: 100%;
       aspect-ratio: 16/9;
       background: #000;
       overflow: hidden;
+      flex-shrink: 0;
     }
-    .video-section img {
-      width: 100%; height: 100%;
-      object-fit: cover; display: block;
-    }
+    .video-section img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .video-placeholder {
       position: absolute; inset: 0;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 6px; color: var(--text2); font-size: 12px;
+      gap: 8px; color: var(--text2); font-size: 12px;
     }
-    .video-placeholder .icon { font-size: 28px; }
+    .video-placeholder .icon { font-size: 32px; opacity: 0.5; }
 
     .cam-badge {
-      position: absolute; top: 8px; left: 8px;
-      background: rgba(0,0,0,0.7); border-radius: 6px;
-      padding: 3px 8px; font-size: 10px; color: var(--text2);
-      display: flex; align-items: center; gap: 4px;
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px; padding: 3px 8px;
+      font-size: 10px; font-weight: 600; color: #fff;
+      display: flex; align-items: center; gap: 5px;
     }
     .rec-dot {
       width: 6px; height: 6px; border-radius: 50%;
-      background: var(--red); animation: blink 1s step-end infinite;
+      background: var(--red); animation: blink 1.2s step-end infinite;
     }
     @keyframes blink { 50% { opacity: 0; } }
 
     .radar-overlay {
-      position: absolute;
-      bottom: 8px; right: 8px;
-      background: rgba(0,0,0,0.6);
+      position: absolute; bottom: 10px; right: 10px;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
       border-radius: 50%;
       border: 1px solid rgba(255,255,255,0.1);
     }
 
+    /* HUD top-right on camera */
     .hud-overlay {
-      position: absolute; top: 8px; right: 8px;
-      display: flex; flex-direction: column; gap: 4px;
+      position: absolute; top: 10px; right: 10px;
+      display: flex; flex-direction: column; gap: 3px;
     }
     .hud-item {
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.06);
       border-radius: 6px; padding: 4px 8px;
-      font-size: 10px; font-family: "SF Mono", monospace;
+      font-size: 10px; font-family: var(--mono);
       display: flex; align-items: center; gap: 5px;
-      white-space: nowrap;
     }
-    .hud-label { color: var(--text2); }
-    .hud-val { font-weight: 700; }
+    .hud-label { color: var(--text2); font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .hud-val { font-weight: 700; color: #fff; }
     .hud-val.green { color: var(--green); }
     .hud-val.yellow { color: var(--yellow); }
     .hud-val.red { color: var(--red); }
 
+    /* Odom bottom-left on camera */
     .odom-overlay {
-      position: absolute; bottom: 8px; left: 8px;
-      background: rgba(0,0,0,0.7);
+      position: absolute; bottom: 10px; left: 10px;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.06);
       border-radius: 8px; padding: 6px 10px;
-      font-size: 10px; font-family: "SF Mono", monospace;
-      display: flex; gap: 10px;
+      font-family: var(--mono);
+      display: flex; gap: 12px;
     }
     .odom-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-    .odom-label { color: var(--text2); font-size: 9px; }
-    .odom-val { font-weight: 700; font-size: 11px; }
+    .odom-label { color: var(--text2); font-size: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .odom-val { font-weight: 700; font-size: 11px; color: #fff; }
 
+    /* ═══ MAP ═══ */
+    .map-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      min-height: 0;
+    }
+    .map-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--surface2);
+    }
+    .map-title-group { display: flex; align-items: center; gap: 8px; }
+    .map-title {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text2);
+    }
+    .map-status-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--text3);
+    }
+    .map-status-dot.active { background: var(--green); box-shadow: 0 0 4px var(--green); }
+    .map-controls { display: flex; align-items: center; gap: 3px; }
+    .map-btn {
+      background: var(--surface3); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text2);
+      padding: 4px 9px; font-size: 10px; font-weight: 600;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, color 0.12s;
+    }
+    .map-btn:hover { background: var(--border2); color: var(--text); }
+    .map-btn:active { opacity: 0.7; }
+    .map-btn.danger { color: var(--red); border-color: rgba(239,68,68,0.3); }
+    .map-canvas-wrap {
+      flex: 1; position: relative;
+      overflow: hidden; cursor: grab; min-height: 0;
+    }
+    .map-canvas-wrap:active { cursor: grabbing; }
+    #mapCanvas { position: absolute; top: 0; left: 0; image-rendering: pixelated; }
+    .map-info-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(8,8,16,0.85));
+      padding: 16px 10px 6px;
+      display: flex; justify-content: space-between; align-items: flex-end;
+      pointer-events: none;
+    }
+    .map-info-left, .map-info-right {
+      background: rgba(0,0,0,0.65);
+      border-radius: 5px; padding: 3px 7px;
+      font-size: 9px; font-family: var(--mono); color: var(--text2);
+      display: flex; gap: 8px;
+    }
+
+    /* ═══ RIGHT COL — CONTROLS ═══ */
     .controls-section {
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 10px 14px;
-      gap: 10px;
+      padding: 10px 12px;
+      gap: 8px;
       min-height: 0;
-      overflow-y: auto;
     }
 
-    .speed-bar {
-      display: flex; align-items: center; gap: 8px;
+    /* Collision banner */
+    .lidar-warn-banner {
+      display: none;
+      align-items: center; gap: 8px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.4);
+      border-radius: 8px; padding: 9px 12px;
+      font-size: 12px; font-weight: 700; color: var(--red);
+      flex-shrink: 0; animation: flash 0.5s ease infinite alternate;
+    }
+    .lidar-warn-banner.visible { display: flex; }
+    @keyframes flash { from { background: rgba(239,68,68,0.08); } to { background: rgba(239,68,68,0.18); } }
+
+    /* ═══ TELEMETRY STRIP ═══ */
+    .telem-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .telem-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 6px;
+      text-align: center;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .telem-chip.warn { border-color: var(--yellow); background: var(--yellow-dim); }
+    .telem-chip.danger { border-color: var(--red); background: var(--red-dim); }
+    .tc-label { font-size: 8px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+    .tc-val { font-size: 15px; font-weight: 800; font-family: var(--mono); line-height: 1; }
+    .tc-val.safe { color: var(--green); }
+    .tc-val.warn { color: var(--yellow); }
+    .tc-val.danger { color: var(--red); }
+    .tc-val.dim { color: var(--text); }
+    .tc-unit { font-size: 8px; color: var(--text3); margin-top: 2px; }
+
+    /* ═══ SENSOR PANELS (IMU + BATT side by side) ═══ */
+    .sensor-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .sensor-panel {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 10px;
+    }
+    .sp-title {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text2); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .sp-title-dot { width: 4px; height: 4px; border-radius: 50%; }
+
+    .imu-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+    .imu-cell {
+      background: var(--surface3);
+      border-radius: 6px; padding: 6px 4px; text-align: center;
+    }
+    .imu-cell-label { font-size: 8px; color: var(--text2); margin-bottom: 2px; }
+    .imu-cell-val { font-size: 14px; font-weight: 700; font-family: var(--mono); }
+
+    .batt-main {
+      display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px;
+    }
+    .batt-pct { font-size: 26px; font-weight: 800; font-family: var(--mono); line-height: 1; }
+    .batt-pct.green { color: var(--green); }
+    .batt-pct.yellow { color: var(--yellow); }
+    .batt-pct.red { color: var(--red); }
+    .batt-volt { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+    .batt-bar-track {
+      height: 5px; background: var(--surface3);
+      border-radius: 3px; overflow: hidden;
+    }
+    .batt-bar-fill {
+      height: 100%; border-radius: 3px;
+      transition: width 0.6s, background 0.4s;
+    }
+
+    /* ═══ CONSOLE ROS ═══ */
+    .console-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 10px 14px;
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .console-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 10px 6px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
       flex-shrink: 0;
     }
-    .speed-bar label { font-size: 11px; color: var(--text2); white-space: nowrap; }
-    .speed-bar input[type="range"] {
-      flex: 1; -webkit-appearance: none;
-      height: 5px; background: var(--border);
-      border-radius: 3px; outline: none;
+    .console-title-group { display: flex; align-items: center; gap: 8px; }
+    .console-title {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text2);
     }
-    .speed-bar input[type="range"]::-webkit-slider-thumb {
+    .console-counters { display: flex; gap: 4px; }
+    .console-badge {
+      font-size: 9px; font-weight: 700; font-family: var(--mono);
+      padding: 2px 7px; border-radius: 4px;
+    }
+    .console-badge.rx { background: var(--green-dim); color: var(--green); }
+    .console-badge.tx { background: var(--blue-dim); color: var(--blue); }
+    .console-controls { display: flex; align-items: center; gap: 4px; }
+    .console-toggle {
+      background: var(--surface3); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--text2);
+      padding: 3px 8px; font-size: 10px; font-weight: 500;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s;
+    }
+    .console-toggle:active { opacity: 0.7; }
+    .console-toggle.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .console-filter-row {
+      display: flex; gap: 4px; padding: 5px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      background: var(--surface2);
+      flex-shrink: 0;
+    }
+    .filter-chip {
+      font-size: 9px; font-weight: 500; padding: 2px 7px;
+      border-radius: 4px; cursor: pointer;
+      background: var(--surface3); color: var(--text2);
+      border: 1px solid var(--border);
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s;
+    }
+    .filter-chip.active { background: var(--blue-dim); color: var(--blue); border-color: rgba(59,130,246,0.4); }
+    .console-body {
+      height: 160px;
+      overflow-y: auto;
+      padding: 5px 10px;
+      font-family: var(--mono);
+      font-size: 10px;
+      line-height: 1.55;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .console-body::-webkit-scrollbar { width: 3px; }
+    .console-body::-webkit-scrollbar-thumb { background: var(--border); }
+    .log-line {
+      display: flex; gap: 5px; align-items: baseline;
+      padding: 1px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.015);
+    }
+    .log-ts { color: var(--text3); font-size: 9px; flex-shrink: 0; }
+    .log-dir { font-size: 9px; font-weight: 700; flex-shrink: 0; min-width: 18px; }
+    .log-rx { color: var(--green); }
+    .log-tx { color: var(--blue); }
+    .log-ev { color: var(--yellow); }
+    .log-topic { color: var(--purple); flex-shrink: 0; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .log-data { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+    /* ═══ SPEED + JOYSTICK ═══ */
+    .speed-row {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      flex-shrink: 0;
+    }
+    .speed-row label { font-size: 10px; color: var(--text2); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.06em; }
+    .speed-row input[type="range"] {
+      flex: 1; -webkit-appearance: none;
+      height: 4px; background: var(--border);
+      border-radius: 2px; outline: none;
+    }
+    .speed-row input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 20px; height: 20px; border-radius: 50%;
+      width: 18px; height: 18px; border-radius: 50%;
       background: var(--blue); cursor: pointer;
       box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
     }
-    .speed-val {
-      font-size: 14px; font-weight: 700; color: var(--blue);
-      min-width: 55px; text-align: right;
-    }
+    .speed-val { font-size: 13px; font-weight: 700; color: var(--blue); font-family: var(--mono); min-width: 50px; text-align: right; }
 
-    .joystick-row {
+    .joystick-section {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 14px;
-      min-height: 200px;
+      gap: 12px;
+      min-height: 180px;
     }
+    .joystick-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .dir-label { font-size: 11px; color: var(--text2); min-height: 16px; text-align: center; }
 
-    .joystick-wrap {
-      display: flex; flex-direction: column;
-      align-items: center; gap: 6px;
+    .vel-panel {
+      display: flex; flex-direction: column; gap: 5px;
     }
-    .dir-label {
-      font-size: 12px; color: var(--text2);
-      min-height: 18px; text-align: center;
-    }
-
-    .vel-stack {
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .vel-mini {
-      background: var(--surface);
+    .vel-chip {
+      background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: 10px; padding: 10px;
-      text-align: center; min-width: 80px;
+      border-radius: 9px; padding: 9px 10px;
+      text-align: center; min-width: 72px;
     }
-    .vel-mini-label { font-size: 9px; color: var(--text2); margin-bottom: 3px; }
-    .vel-mini-val { font-size: 16px; font-weight: 700; }
+    .vel-chip-label { font-size: 8px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+    .vel-chip-val { font-size: 18px; font-weight: 800; font-family: var(--mono); }
 
+    /* STOP button */
     .stop-btn {
       width: 100%;
-      padding: 16px;
-      background: var(--red);
-      border: none;
+      padding: 15px;
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      border: 1px solid rgba(239,68,68,0.4);
       border-radius: var(--radius);
       color: #fff;
-      font-size: 20px;
-      font-weight: 900;
-      letter-spacing: 0.05em;
-      cursor: pointer;
-      flex-shrink: 0;
+      font-size: 18px; font-weight: 900;
+      letter-spacing: 0.08em;
+      cursor: pointer; flex-shrink: 0;
       -webkit-tap-highlight-color: transparent;
-      transition: opacity 0.1s, transform 0.1s;
+      transition: opacity 0.1s, transform 0.08s, box-shadow 0.1s;
+      box-shadow: 0 4px 16px rgba(220,38,38,0.3);
     }
-    .stop-btn:active { opacity: 0.8; transform: scale(0.98); }
+    .stop-btn:active { opacity: 0.85; transform: scale(0.97); box-shadow: 0 2px 8px rgba(220,38,38,0.2); }
 
-    .nav-row {
-      display: flex; gap: 8px; flex-shrink: 0;
-    }
+    /* Nav */
+    .nav-row { display: flex; gap: 6px; flex-shrink: 0; }
     .nav-btn {
-      flex: 1; padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--surface);
-      color: var(--text2);
-      font-size: 12px; font-weight: 600;
+      flex: 1; padding: 9px;
+      border: 1px solid var(--border); border-radius: 9px;
+      background: var(--surface2); color: var(--text2);
+      font-size: 11px; font-weight: 600;
       text-align: center; text-decoration: none;
-      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s;
     }
-    .nav-btn:active { opacity: 0.75; }
+    .nav-btn:active { opacity: 0.7; }
 
+    /* Overlay not connected */
     .not-connected-overlay {
       position: fixed; inset: 0;
-      background: rgba(13,13,15,0.92);
+      background: rgba(8,8,16,0.94);
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       gap: 16px; z-index: 100; padding: 24px; text-align: center;
@@ -242,248 +486,29 @@
     .not-connected-overlay p { color: var(--text2); font-size: 14px; line-height: 1.5; }
     .not-connected-overlay a {
       background: var(--blue); color: #fff;
-      border-radius: 12px; padding: 14px 28px;
+      border-radius: 12px; padding: 13px 28px;
       text-decoration: none; font-weight: 700; font-size: 15px;
     }
 
-    .lidar-warn-banner {
-      display: none;
-      align-items: center; gap: 6px;
-      background: rgba(239,68,68,0.15);
-      border: 1px solid rgba(239,68,68,0.4);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 12px; font-weight: 600;
-      color: var(--red);
-      flex-shrink: 0;
-    }
-    .lidar-warn-banner.visible { display: flex; }
-
-    .telem-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
-    .telem-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-    }
-    .telem-card.full { grid-column: 1 / -1; }
-
-    .telem-title {
-      font-size: 9px; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--text2); margin-bottom: 8px;
-    }
-
-    .lidar-dist-row {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
-    }
-    .lidar-cell {
-      background: var(--surface2);
-      border-radius: 8px; padding: 8px 4px;
-      text-align: center;
-      border: 2px solid transparent;
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .lidar-cell.warn { border-color: var(--yellow); background: rgba(245,158,11,0.08); }
-    .lidar-cell.danger { border-color: var(--red); background: rgba(239,68,68,0.12); }
-    .lidar-cell-label { font-size: 9px; color: var(--text2); margin-bottom: 3px; }
-    .lidar-cell-val { font-size: 18px; font-weight: 800; }
-    .lidar-cell-val.safe { color: var(--green); }
-    .lidar-cell-val.warn { color: var(--yellow); }
-    .lidar-cell-val.danger { color: var(--red); }
-    .lidar-cell-unit { font-size: 9px; color: var(--text2); margin-top: 1px; }
-
-    .imu-row {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
-    }
-    .imu-cell {
-      background: var(--surface2);
-      border-radius: 8px; padding: 8px 4px;
-      text-align: center;
-    }
-    .imu-cell-label { font-size: 9px; color: var(--text2); margin-bottom: 3px; }
-    .imu-cell-val { font-size: 16px; font-weight: 700; }
-
-    .batt-row {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .batt-info { flex: 1; }
-    .batt-stats {
-      display: flex; gap: 12px; margin-bottom: 6px;
-    }
-    .batt-stat-label { font-size: 9px; color: var(--text2); }
-    .batt-stat-val { font-size: 18px; font-weight: 800; }
-    .batt-stat-val.green { color: var(--green); }
-    .batt-stat-val.yellow { color: var(--yellow); }
-    .batt-stat-val.red { color: var(--red); }
-    .batt-bar-track {
-      height: 6px; background: var(--border);
-      border-radius: 3px; overflow: hidden;
-    }
-    .batt-bar-fill {
-      height: 100%; border-radius: 3px;
-      background: var(--green); transition: width 0.5s;
-    }
-
-    .console-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      flex-shrink: 0;
-      overflow: hidden;
-    }
-    .console-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--border);
-    }
-    .console-title {
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--text2);
-    }
-    .console-controls {
-      display: flex; align-items: center; gap: 6px;
-    }
-    .console-badge {
-      font-size: 9px; font-weight: 700;
-      padding: 2px 6px; border-radius: 4px;
-      min-width: 20px; text-align: center;
-    }
-    .console-badge.rx { background: rgba(34,197,94,0.15); color: var(--green); }
-    .console-badge.tx { background: rgba(59,130,246,0.15); color: var(--blue); }
-    .console-toggle {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--text2);
-      padding: 3px 8px; font-size: 10px; cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .console-toggle:active { opacity: 0.7; }
-    .console-toggle.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-    .console-body {
-      height: 140px;
-      overflow-y: auto;
-      padding: 6px 10px;
-      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
-      font-size: 10px;
-      line-height: 1.5;
-      scroll-behavior: smooth;
-    }
-    .log-line {
-      padding: 1px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.02);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .log-ts { color: var(--text2); margin-right: 4px; }
-    .log-rx { color: var(--green); }
-    .log-tx { color: var(--blue); }
-    .log-ev { color: var(--yellow); }
-    .log-err { color: var(--red); }
-    .log-topic { color: #a78bfa; }
-    .log-data { color: var(--text2); }
-    .console-filter-row {
-      display: flex; gap: 4px; padding: 6px 10px;
-      border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-    .filter-chip {
-      font-size: 9px; padding: 2px 7px;
-      border-radius: 4px; cursor: pointer;
-      background: var(--surface2); color: var(--text2);
-      border: 1px solid var(--border);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .filter-chip.active { background: rgba(59,130,246,0.15); color: var(--blue); border-color: var(--blue); }
-
-    .left-col, .right-col {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-    .right-col {
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    .map-section {
-      position: relative;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      flex: 1;
-      min-height: 280px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .map-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 6px 10px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .map-title {
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--text2);
-    }
-    .map-controls {
-      display: flex; align-items: center; gap: 4px;
-    }
-    .map-btn {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--text2);
-      padding: 3px 8px; font-size: 10px; cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .map-btn:active { opacity: 0.7; }
-    .map-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-    .map-canvas-wrap {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      cursor: grab;
-    }
-    .map-canvas-wrap:active { cursor: grabbing; }
-    #mapCanvas {
-      position: absolute;
-      top: 0; left: 0;
-      image-rendering: pixelated;
-    }
-    .map-info {
-      position: absolute; bottom: 6px; left: 6px;
-      background: rgba(0,0,0,0.7);
-      border-radius: 6px; padding: 3px 8px;
-      font-size: 9px; font-family: "SF Mono", monospace;
-      color: var(--text2);
-      display: flex; gap: 8px;
-    }
-    .map-scale {
-      position: absolute; bottom: 6px; right: 6px;
-      background: rgba(0,0,0,0.7);
-      border-radius: 6px; padding: 3px 8px;
-      font-size: 9px; color: var(--text2);
-    }
-
+    /* ═══ RESPONSIVE ═══ */
     @media (orientation: landscape) {
       .main { flex-direction: row; }
       .left-col { width: 55%; height: 100%; display: grid; grid-template-rows: 45% 55%; overflow: hidden; }
-      .right-col { width: 45%; height: 100%; overflow-y: auto; }
-      .video-section { aspect-ratio: unset; width: 100%; height: 100%; min-height: 0; overflow: hidden; }
-      .map-section { width: 100%; height: 100%; min-height: 0; overflow: hidden; }
-      .controls-section { padding: 8px 10px; gap: 8px; }
-      .joystick-row { min-height: 160px; }
+      .right-col { width: 45%; height: 100%; overflow-y: auto; padding: 0; }
+      .video-section { aspect-ratio: unset; height: 100%; }
+      .map-section { height: 100%; }
+      .controls-section { padding: 8px 10px; gap: 7px; }
+      .joystick-section { min-height: 150px; }
+      .console-body { height: 130px; }
     }
 
     @media (orientation: portrait) {
-      .map-section { min-height: 300px; max-height: 400px; }
+      .map-section { min-height: 280px; max-height: 380px; }
+      .console-body { height: 120px; }
+    }
+
+    @media (max-width: 360px) {
+      .telem-strip { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -513,10 +538,11 @@
 <div class="main">
 <div class="left-col">
 
+  <!-- CAMERA FEED -->
   <div class="video-section">
     <div class="video-placeholder" id="videoPlaceholder">
       <div class="icon">📷</div>
-      <p>Chargement caméra...</p>
+      <p>Caméra indisponible</p>
     </div>
     <img id="cameraImg" src="" alt="Camera" style="display:none"
          onload="onCamLoad()" onerror="onCamError()" />
@@ -526,8 +552,9 @@
       <span>LIVE</span>
     </div>
 
-    <canvas id="radarMini" class="radar-overlay" width="120" height="120"></canvas>
+    <canvas id="radarMini" class="radar-overlay" width="110" height="110"></canvas>
 
+    <!-- HUD top-right -->
     <div class="hud-overlay">
       <div class="hud-item">
         <span class="hud-label">BAT</span>
@@ -537,12 +564,13 @@
         <span class="hud-label">YAW</span>
         <span class="hud-val" id="hudYaw">—°</span>
       </div>
-      <div class="hud-item" id="hudFrontWrap">
+      <div class="hud-item">
         <span class="hud-label">AVT</span>
         <span class="hud-val" id="hudFront">—m</span>
       </div>
     </div>
 
+    <!-- Odometry bottom-left -->
     <div class="odom-overlay">
       <div class="odom-item">
         <span class="odom-label">X</span>
@@ -553,51 +581,65 @@
         <span class="odom-val" id="odomY">0.00</span>
       </div>
       <div class="odom-item">
-        <span class="odom-label">HDG</span>
+        <span class="odom-label">Cap</span>
         <span class="odom-val" id="odomHdg">0°</span>
       </div>
       <div class="odom-item">
-        <span class="odom-label">VIT</span>
+        <span class="odom-label">Vit</span>
         <span class="odom-val" id="odomSpd">0.00</span>
       </div>
     </div>
   </div>
 
+  <!-- SLAM MAP -->
   <div class="map-section">
     <div class="map-header">
-      <span class="map-title">Carte SLAM (LiDAR + Odométrie)</span>
+      <div class="map-title-group">
+        <div class="map-status-dot" id="mapStatusDot"></div>
+        <span class="map-title">Carte SLAM</span>
+      </div>
       <div class="map-controls">
-        <button class="map-btn" onclick="mapZoomIn()">+</button>
-        <button class="map-btn" onclick="mapZoomOut()">-</button>
-        <button class="map-btn" onclick="mapCenter()">Centrer</button>
-        <button class="map-btn" onclick="mapClear()">Effacer</button>
+        <button class="map-btn" onclick="mapZoomIn()">＋</button>
+        <button class="map-btn" onclick="mapZoomOut()">－</button>
+        <button class="map-btn" onclick="mapCenter()">⊙ Centre</button>
+        <button class="map-btn danger" onclick="mapClear()">✕ Effacer</button>
       </div>
     </div>
     <div class="map-canvas-wrap" id="mapWrap">
       <canvas id="mapCanvas"></canvas>
-      <div class="map-info">
-        <span id="mapCells">0 cellules</span>
-        <span id="mapSize">10m x 10m</span>
+      <div class="map-info-bar">
+        <div class="map-info-left">
+          <span id="mapCells">0 murs</span>
+          <span>10m × 10m</span>
+        </div>
+        <div class="map-info-right">
+          <span id="mapScaleLabel">1px = 2.5cm</span>
+        </div>
       </div>
-      <div class="map-scale" id="mapScaleLabel">1px = 2.5cm</div>
     </div>
   </div>
 
-</div>
+</div><!-- /left-col -->
+
 <div class="right-col">
 
+  <!-- CONSOLE ROS -->
   <div class="console-card">
     <div class="console-header">
-      <span class="console-title">Console ROS</span>
+      <div class="console-title-group">
+        <span class="console-title">Console ROS</span>
+        <div class="console-counters">
+          <span class="console-badge rx" id="rxCount">RX 0</span>
+          <span class="console-badge tx" id="txCount">TX 0</span>
+        </div>
+      </div>
       <div class="console-controls">
-        <span class="console-badge rx" id="rxCount">RX 0</span>
-        <span class="console-badge tx" id="txCount">TX 0</span>
         <button class="console-toggle active" id="autoScrollBtn" onclick="toggleAutoScroll()">Auto</button>
         <button class="console-toggle" id="pauseBtn" onclick="togglePause()">Pause</button>
         <button class="console-toggle" onclick="clearConsole()">Vider</button>
       </div>
     </div>
-    <div class="console-filter-row" id="filterRow">
+    <div class="console-filter-row">
       <span class="filter-chip active" data-filter="all" onclick="setFilter('all')">Tout</span>
       <span class="filter-chip" data-filter="/cmd_vel" onclick="setFilter('/cmd_vel')">cmd_vel</span>
       <span class="filter-chip" data-filter="/scan_reliable" onclick="setFilter('/scan_reliable')">lidar</span>
@@ -611,35 +653,43 @@
 
   <div class="controls-section">
 
+    <!-- COLLISION ALERT -->
     <div class="lidar-warn-banner" id="collisionBanner">
-      ⚠ Obstacle proche !
+      ⚠ Obstacle détecté — ralentir !
     </div>
 
-    <div class="telem-grid">
-      <div class="telem-card full">
-        <div class="telem-title">LiDAR — Distances</div>
-        <div class="lidar-dist-row">
-          <div class="lidar-cell" id="lidarCellLeft">
-            <div class="lidar-cell-label">⬅ Gauche</div>
-            <div class="lidar-cell-val safe" id="lidarLeft">—</div>
-            <div class="lidar-cell-unit">m</div>
-          </div>
-          <div class="lidar-cell" id="lidarCellFront">
-            <div class="lidar-cell-label">⬆ Avant</div>
-            <div class="lidar-cell-val safe" id="lidarFront">—</div>
-            <div class="lidar-cell-unit">m</div>
-          </div>
-          <div class="lidar-cell" id="lidarCellRight">
-            <div class="lidar-cell-label">➡ Droite</div>
-            <div class="lidar-cell-val safe" id="lidarRight">—</div>
-            <div class="lidar-cell-unit">m</div>
-          </div>
-        </div>
+    <!-- LIDAR STRIP: 4 directions -->
+    <div class="telem-strip">
+      <div class="telem-chip" id="lidarCellFront">
+        <div class="tc-label">⬆ Avant</div>
+        <div class="tc-val safe" id="lidarFront">—</div>
+        <div class="tc-unit">m</div>
       </div>
+      <div class="telem-chip" id="lidarCellLeft">
+        <div class="tc-label">⬅ Gauche</div>
+        <div class="tc-val safe" id="lidarLeft">—</div>
+        <div class="tc-unit">m</div>
+      </div>
+      <div class="telem-chip" id="lidarCellRight">
+        <div class="tc-label">➡ Droite</div>
+        <div class="tc-val safe" id="lidarRight">—</div>
+        <div class="tc-unit">m</div>
+      </div>
+      <div class="telem-chip" id="lidarCellBack">
+        <div class="tc-label">⬇ Arrière</div>
+        <div class="tc-val safe" id="lidarBack">—</div>
+        <div class="tc-unit">m</div>
+      </div>
+    </div>
 
-      <div class="telem-card">
-        <div class="telem-title">IMU</div>
-        <div class="imu-row">
+    <!-- IMU + BATTERY side by side -->
+    <div class="sensor-row">
+      <div class="sensor-panel">
+        <div class="sp-title">
+          <div class="sp-title-dot" style="background:var(--blue)"></div>
+          IMU
+        </div>
+        <div class="imu-grid">
           <div class="imu-cell">
             <div class="imu-cell-label">Roll</div>
             <div class="imu-cell-val" id="imuRoll">—°</div>
@@ -655,42 +705,39 @@
         </div>
       </div>
 
-      <div class="telem-card">
-        <div class="telem-title">Batterie</div>
-        <div class="batt-info">
-          <div class="batt-stats">
-            <div>
-              <div class="batt-stat-label">Tension</div>
-              <div class="batt-stat-val" id="battVoltage">—V</div>
-            </div>
-            <div>
-              <div class="batt-stat-label">Niveau</div>
-              <div class="batt-stat-val green" id="battPct">—%</div>
-            </div>
-          </div>
-          <div class="batt-bar-track">
-            <div class="batt-bar-fill" id="battBar" style="width:0%"></div>
-          </div>
+      <div class="sensor-panel">
+        <div class="sp-title">
+          <div class="sp-title-dot" style="background:var(--green)"></div>
+          Batterie
+        </div>
+        <div class="batt-main">
+          <div class="batt-pct green" id="battPct">—</div>
+          <div class="batt-volt" id="battVoltage">—V</div>
+        </div>
+        <div class="batt-bar-track">
+          <div class="batt-bar-fill" id="battBar" style="width:0%;background:var(--green)"></div>
         </div>
       </div>
     </div>
 
-    <div class="speed-bar">
-      <label>Vitesse</label>
+    <!-- SPEED SLIDER -->
+    <div class="speed-row">
+      <label>Vitesse max</label>
       <input type="range" id="speedSlider" min="0.05" max="0.3" step="0.01" value="0.15"
              oninput="onSpeedChange(this.value)" />
-      <div class="speed-val" id="speedVal">0.15</div>
+      <div class="speed-val" id="speedVal">0.15 m/s</div>
     </div>
 
-    <div class="joystick-row">
-      <div class="vel-stack">
-        <div class="vel-mini">
-          <div class="vel-mini-label">LIN</div>
-          <div class="vel-mini-val" id="velLin">0.00</div>
+    <!-- JOYSTICK + VELOCITY READOUT -->
+    <div class="joystick-section">
+      <div class="vel-panel">
+        <div class="vel-chip">
+          <div class="vel-chip-label">Lin m/s</div>
+          <div class="vel-chip-val" id="velLin">0.00</div>
         </div>
-        <div class="vel-mini">
-          <div class="vel-mini-label">ANG</div>
-          <div class="vel-mini-val" id="velAng">0.00</div>
+        <div class="vel-chip">
+          <div class="vel-chip-label">Ang r/s</div>
+          <div class="vel-chip-val" id="velAng">0.00</div>
         </div>
       </div>
 
@@ -700,16 +747,19 @@
       </div>
     </div>
 
-    <button class="stop-btn" id="stopBtn" ontouchstart="emergencyStop(event)" onclick="emergencyStop(event)">STOP</button>
+    <!-- EMERGENCY STOP -->
+    <button class="stop-btn" id="stopBtn" ontouchstart="emergencyStop(event)" onclick="emergencyStop(event)">
+      ■ STOP
+    </button>
 
     <div class="nav-row">
       <a class="nav-btn" href="../step-2-sensors/">← Capteurs</a>
-      <a class="nav-btn" href="../step-0-connect/">Connexion</a>
+      <a class="nav-btn" href="../step-0-connect/">⚙ Connexion</a>
     </div>
 
   </div>
 
-</div>
+</div><!-- /right-col -->
 </div>
 
 <script src="../lib/rosbridge.js"></script>
@@ -764,11 +814,13 @@
     subscribeBattery();
     subscribeOdom();
     startPublishLoop();
+    document.getElementById("mapStatusDot").classList.add("active");
   }
 
   function onDisconnected() {
     document.getElementById("dot").className = "dot error";
     document.getElementById("connLabel").textContent = "Déconnecté";
+    document.getElementById("mapStatusDot").classList.remove("active");
     stopPublishLoop();
   }
 
@@ -794,7 +846,7 @@
 
   function onSpeedChange(val) {
     maxLinear = parseFloat(val);
-    document.getElementById("speedVal").textContent = maxLinear.toFixed(2);
+    document.getElementById("speedVal").textContent = maxLinear.toFixed(2) + " m/s";
   }
 
   // --- Battery
@@ -886,6 +938,7 @@
       var front = minValidRange(ranges, 0, sector, n - sector, n);
       var left  = minValidSingle(ranges, sector, quarter);
       var right = minValidSingle(ranges, n - quarter, n - sector);
+      var back  = minValidSingle(ranges, Math.floor(n * 0.4), Math.floor(n * 0.6));
       frontDistance = front;
 
       var hudFront = document.getElementById("hudFront");
@@ -896,6 +949,7 @@
       updateLidarCell("Front", front, "lidarCellFront");
       updateLidarCell("Left",  left,  "lidarCellLeft");
       updateLidarCell("Right", right, "lidarCellRight");
+      updateLidarCell("Back",  back,  "lidarCellBack");
 
       var banner = document.getElementById("collisionBanner");
       var minAll = Math.min(front, left, right);
@@ -942,18 +996,19 @@
   function updateLidarCell(direction, distance, cellId) {
     var valEl = document.getElementById("lidar" + direction);
     var cellEl = document.getElementById(cellId);
+    if (!valEl || !cellEl) return;
     var text = distance > 10 ? "∞" : distance.toFixed(2);
     valEl.textContent = text;
 
-    cellEl.className = "lidar-cell";
+    cellEl.className = "telem-chip";
     if (distance < DANGER_DIST) {
-      valEl.className = "lidar-cell-val danger";
+      valEl.className = "tc-val danger";
       cellEl.classList.add("danger");
     } else if (distance < WARN_DIST) {
-      valEl.className = "lidar-cell-val warn";
+      valEl.className = "tc-val warn";
       cellEl.classList.add("warn");
     } else {
-      valEl.className = "lidar-cell-val safe";
+      valEl.className = "tc-val safe";
     }
   }
 
@@ -961,9 +1016,9 @@
   function drawRadar() {
     var canvas = document.getElementById("radarMini");
     var ctx = canvas.getContext("2d");
-    var cx = 60, cy = 60, maxR = 52, maxDist = 3.0;
+    var cx = 55, cy = 55, maxR = 48, maxDist = 3.0;
 
-    ctx.clearRect(0, 0, 120, 120);
+    ctx.clearRect(0, 0, 110, 110);
 
     ctx.beginPath();
     ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
@@ -1197,13 +1252,13 @@
     var velMsg = {
       header: { stamp: { sec: 0, nanosec: 0 }, frame_id: "base_link" },
       twist: {
-        linear: { x: -lin, y: 0, z: 0 },
-        angular: { x: 0, y: 0, z: -ang },
+        linear: { x: lin, y: 0, z: 0 },
+        angular: { x: 0, y: 0, z: ang },
       }
     };
     bridge.publish("/cmd_vel", "geometry_msgs/msg/TwistStamped", velMsg);
     if (lin !== 0 || ang !== 0) {
-      consoleLog("tx", "/cmd_vel", "lin=" + (-lin).toFixed(3) + " ang=" + (-ang).toFixed(3));
+      consoleLog("tx", "/cmd_vel", "lin=" + lin.toFixed(3) + " ang=" + ang.toFixed(3));
     }
   }
 
@@ -1253,13 +1308,13 @@
     line.setAttribute("data-topic", entry.topic);
     line.setAttribute("data-dir", entry.dir);
 
-    var dirClass = entry.dir === "rx" ? "log-rx" : entry.dir === "tx" ? "log-tx" : "log-ev";
+    var dirClass = "log-dir " + (entry.dir === "rx" ? "log-rx" : entry.dir === "tx" ? "log-tx" : "log-ev");
     var dirLabel = entry.dir === "rx" ? "RX" : entry.dir === "tx" ? "TX" : "EV";
 
     line.innerHTML =
       '<span class="log-ts">' + entry.ts + '</span>' +
-      '<span class="' + dirClass + '">' + dirLabel + '</span> ' +
-      '<span class="log-topic">' + entry.topic + '</span> ' +
+      '<span class="' + dirClass + '">' + dirLabel + '</span>' +
+      '<span class="log-topic">' + entry.topic + '</span>' +
       '<span class="log-data">' + escapeHtml(entry.data) + '</span>';
 
     body.appendChild(line);

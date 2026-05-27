@@ -709,7 +709,25 @@
     const list = document.getElementById("topicsList");
     if (!connected) return;
 
+    list.innerHTML = '<div style="color:var(--text2); font-size:13px">Interrogation rosapi...</div>';
+
+    let responded = false;
+    const timeout = setTimeout(() => {
+      if (responded) return;
+      responded = true;
+      list.innerHTML = "";
+      const warn = document.createElement("div");
+      warn.style.cssText = "font-size:12px;color:var(--yellow);padding:8px 10px;line-height:1.5;";
+      warn.innerHTML = "⚠ <b>rosapi inactif</b> sur le robot.<br>Lancez <code>ros2 run rosapi rosapi_node</code> côté robot pour voir la liste, ou continuez sans (les abonnements /battery_state et /imu fonctionnent déjà ✓).";
+      list.appendChild(warn);
+      log("rosapi non disponible — liste des topics indisponible (mais connexion OK)", "warn");
+    }, 5000);
+
     bridge.getTopics((result) => {
+      if (responded) return;
+      responded = true;
+      clearTimeout(timeout);
+
       const available = result.topics || [];
       list.innerHTML = "";
 
